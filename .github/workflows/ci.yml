@@ -2,9 +2,10 @@ name: CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
+
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 permissions:
   contents: read
@@ -18,6 +19,24 @@ jobs:
   backend:
     name: Backend - Build & Test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+
+        env:
+          POSTGRES_DB: agentswarm
+          POSTGRES_USER: agentswarm
+          POSTGRES_PASSWORD: agentswarm
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd="pg_isready -U agentswarm -d agentswarm"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     defaults:
       run:
@@ -38,6 +57,12 @@ jobs:
         run: mvn -B -q compile
 
       - name: Run backend tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: agentswarm
+          DB_USER: agentswarm
+          DB_PASSWORD: agentswarm
         run: mvn -B -q test
 
 
@@ -81,8 +106,8 @@ jobs:
       - backend
       - frontend
 
-    # Only push Docker images when code is actually
-    # pushed to main or develop.
+    # Only push Docker images on actual pushes
+    # to main or develop.
     if: github.event_name == 'push'
 
     steps:
