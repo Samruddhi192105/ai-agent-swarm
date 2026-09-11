@@ -127,8 +127,8 @@ jobs:
           context: ./backend
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/ai-agent-swarm-backend:latest
-            ghcr.io/${{ github.repository_owner }}/ai-agent-swarm-backend:${{ github.sha }}
+            ghcr.io/samruddhi192105/ai-agent-swarm-backend:latest
+            ghcr.io/samruddhi192105/ai-agent-swarm-backend:${{ github.sha }}
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
@@ -136,5 +136,5 @@ jobs:
           context: ./frontend
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/ai-agent-swarm-frontend:latest
-            ghcr.io/${{ github.repository_owner }}/ai-agent-swarm-frontend:${{ github.sha }}
+            ghcr.io/samruddhi192105/ai-agent-swarm-frontend:latest
+            ghcr.io/samruddhi192105/ai-agent-swarm-frontend:${{ github.sha }}
