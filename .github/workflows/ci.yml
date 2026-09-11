@@ -1,0 +1,115 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+
+  # =========================
+  # BACKEND CI
+  # =========================
+  backend:
+    name: Backend - Build & Test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Compile backend
+        run: mvn -B -q compile
+
+      - name: Run backend tests
+        run: mvn -B -q test
+
+
+  # =========================
+  # FRONTEND CI
+  # =========================
+  frontend:
+    name: Frontend - Build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+
+  # =========================
+  # DOCKER BUILD & PUSH
+  # =========================
+  docker:
+    name: Docker - Build & Push
+    runs-on: ubuntu-latest
+
+    needs:
+      - backend
+      - frontend
+
+    # Only push Docker images when code is actually
+    # pushed to main or develop.
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ai-agent-swarm-backend:latest
+            ghcr.io/${{ github.repository_owner }}/ai-agent-swarm-backend:${{ github.sha }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ai-agent-swarm-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/ai-agent-swarm-frontend:${{ github.sha }}

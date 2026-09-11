@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: agentswarm
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:agentswarm}
+    username: ${DB_USER:agentswarm}
+    password: ${DB_PASSWORD:agentswarm}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8080
+
+llm:
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    model: ${LLM_GEMINI_MODEL:gemini-3.6-flash}
+
+sandbox:
+  build-image: maven:3.9-eclipse-temurin-21
+  timeout-seconds: 180
+  memory-limit-mb: 1024
+  workspace-root: /tmp/agentswarm-runs
+
+zip:
+  output-dir: /tmp/agentswarm-zips
