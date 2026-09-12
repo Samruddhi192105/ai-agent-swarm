@@ -12,7 +12,7 @@ body {
 }
 
 body {
-  background: #050807;
+  background: #030605;
   color: #f4f4f7;
   font-family: "Space Grotesk", sans-serif;
 }
@@ -26,24 +26,30 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
 a {
   color: inherit;
 }
 
-/* =========================
+/* =========================================
    MAIN PAGE
-========================= */
+========================================= */
 
 .swarm-page {
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
+
+  overflow-x: hidden;
+
   padding: 28px 5vw 35px;
 
   background:
     radial-gradient(
       circle at 50% -10%,
-      rgba(34, 197, 94, 0.20),
+      rgba(66, 245, 179, 0.14),
       transparent 35%
     ),
     radial-gradient(
@@ -51,18 +57,74 @@ a {
       rgba(0, 220, 255, 0.08),
       transparent 30%
     ),
-    #050807;
+    #030605;
 }
 
-/* =========================
-   BACKGROUND
-========================= */
+/* =========================================
+   BACKGROUND IMAGE
+========================================= */
+
+.image-background {
+  position: fixed;
+  inset: 0;
+
+  z-index: 0;
+
+  pointer-events: none;
+
+  overflow: hidden;
+}
+
+.image-background img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  opacity: 0.12;
+
+  filter:
+    grayscale(100%)
+    contrast(125%)
+    brightness(45%);
+
+  transform: scale(1.04);
+}
+
+.background-overlay {
+  position: fixed;
+  inset: 0;
+
+  z-index: 0;
+
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(66, 245, 179, 0.12),
+      transparent 38%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(2, 7, 5, 0.78),
+      rgba(2, 6, 5, 0.96)
+    );
+}
+
+/* =========================================
+   GRID
+========================================= */
 
 .grid-background {
   position: fixed;
   inset: 0;
+
+  z-index: 0;
+
   pointer-events: none;
-  opacity: 0.20;
+
+  opacity: 0.18;
 
   background-image:
     linear-gradient(
@@ -77,44 +139,69 @@ a {
 
   background-size: 45px 45px;
 
-  mask-image: linear-gradient(
-    to bottom,
-    black,
-    transparent 85%
-  );
+  mask-image:
+    linear-gradient(
+      to bottom,
+      black,
+      transparent 88%
+    );
 }
+
+/* =========================================
+   AMBIENT GLOWS
+========================================= */
 
 .ambient {
   position: fixed;
+
   width: 500px;
   height: 500px;
+
   border-radius: 50%;
+
   filter: blur(120px);
+
   pointer-events: none;
-  opacity: 0.10;
+
+  opacity: 0.11;
+
+  z-index: 0;
 }
 
 .ambient-one {
-  background: #22c55e;
-  top: 15%;
-  left: -250px;
+  background: #20e69a;
+
+  top: 10%;
+  left: -260px;
 }
 
 .ambient-two {
   background: #00d9ff;
+
   bottom: -250px;
   right: -150px;
 }
 
-/* =========================
+.ambient-three {
+  background: #42f5b3;
+
+  top: 35%;
+  right: -350px;
+
+  opacity: 0.06;
+}
+
+/* =========================================
    HEADER
-========================= */
+========================================= */
 
 .topbar {
   position: relative;
+
   z-index: 2;
 
   max-width: 1400px;
+
   margin: auto;
 
   display: flex;
@@ -123,12 +210,14 @@ a {
 
   padding-bottom: 25px;
 
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.08);
 }
 
 .brand-area {
   display: flex;
   align-items: center;
+
   gap: 13px;
 }
 
@@ -147,44 +236,53 @@ a {
   background:
     linear-gradient(
       135deg,
-      #16a34a,
-      #4ade80
+      #42f5b3,
+      #00d9a0,
+      #35d9ff
     );
 
   box-shadow:
-    0 0 25px rgba(34, 197, 94, 0.45);
+    0 0 28px rgba(66, 245, 179, 0.35);
 }
 
 .brand-title {
   font-family: "JetBrains Mono", monospace;
+
   font-size: 15px;
+
   font-weight: 700;
+
   letter-spacing: 0.16em;
 }
 
 .brand-title span {
-  color: #4ade80;
+  color: #42f5b3;
 }
 
 .brand-subtitle {
   margin-top: 4px;
 
-  color: #7f8a82;
+  color: #7f8494;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 9px;
+
   letter-spacing: 0.12em;
 }
 
 .system-status {
   display: flex;
   align-items: center;
+
   gap: 8px;
 
-  color: #8c968e;
+  color: #8c92a3;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 10px;
+
   letter-spacing: 0.08em;
 }
 
@@ -198,17 +296,21 @@ a {
 
   box-shadow:
     0 0 10px #42f5b3;
+
+  animation: pulse 2s infinite;
 }
 
-/* =========================
+/* =========================================
    HERO
-========================= */
+========================================= */
 
 .hero-section {
   position: relative;
+
   z-index: 1;
 
   max-width: 1000px;
+
   margin: 85px auto 55px;
 
   text-align: center;
@@ -217,19 +319,28 @@ a {
 .hero-badge {
   display: inline-flex;
   align-items: center;
+
   gap: 8px;
 
   padding: 8px 13px;
 
-  border: 1px solid rgba(74, 222, 128, 0.30);
+  border:
+    1px solid rgba(66, 245, 179, 0.28);
+
   border-radius: 100px;
 
-  color: #86efac;
+  color: #6ff8c2;
 
-  background: rgba(34, 197, 94, 0.07);
+  background:
+    rgba(66, 245, 179, 0.07);
+
+  box-shadow:
+    0 0 30px rgba(66, 245, 179, 0.06);
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 10px;
+
   letter-spacing: 0.1em;
 }
 
@@ -237,7 +348,9 @@ a {
   margin: 22px 0 18px;
 
   font-size: clamp(42px, 6vw, 78px);
+
   line-height: 0.98;
+
   letter-spacing: -0.045em;
 
   font-weight: 700;
@@ -246,74 +359,132 @@ a {
 .hero-section h1 span {
   background:
     linear-gradient(
-      90deg,
-      #ffffff,
-      #4ade80,
-      #55dcff
+      100deg,
+      #ffffff 5%,
+      #42f5b3 48%,
+      #55dcff 95%
     );
 
   -webkit-background-clip: text;
   background-clip: text;
 
   color: transparent;
+
+  background-size: 200% auto;
+
+  animation: gradientFlow 6s linear infinite;
 }
 
 .hero-section p {
   max-width: 610px;
+
   margin: auto;
 
   color: #9a9eac;
 
   font-size: 15px;
+
   line-height: 1.7;
 }
 
-/* =========================
+/* =========================================
+   HERO ORBITS
+========================================= */
+
+.hero-orbit {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  border:
+    1px solid rgba(66, 245, 179, 0.06);
+
+  border-radius: 50%;
+
+  transform: translate(-50%, -50%);
+
+  pointer-events: none;
+}
+
+.hero-orbit-one {
+  width: 700px;
+  height: 280px;
+
+  transform:
+    translate(-50%, -50%)
+    rotate(-7deg);
+}
+
+.hero-orbit-two {
+  width: 900px;
+  height: 380px;
+
+  transform:
+    translate(-50%, -50%)
+    rotate(8deg);
+
+  border-color:
+    rgba(0, 217, 255, 0.045);
+}
+
+/* =========================================
    COMMAND PANEL
-========================= */
+========================================= */
 
 .command-panel {
   position: relative;
+
   z-index: 2;
 
   max-width: 1200px;
+
   margin: auto;
 
   padding: 18px;
 
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border:
+    1px solid rgba(255, 255, 255, 0.10);
+
   border-radius: 18px;
 
   background:
     linear-gradient(
       135deg,
-      rgba(255,255,255,0.065),
-      rgba(255,255,255,0.025)
+      rgba(255, 255, 255, 0.065),
+      rgba(66, 245, 179, 0.018),
+      rgba(255, 255, 255, 0.018)
     );
 
   backdrop-filter: blur(20px);
 
   box-shadow:
-    0 30px 100px rgba(0,0,0,0.45);
+    0 30px 100px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .command-label {
   display: flex;
   align-items: center;
+
   gap: 7px;
 
   margin-bottom: 11px;
 
-  color: #8f9991;
+  color: #8f95a6;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 10px;
+
   font-weight: 600;
+
   letter-spacing: 0.1em;
 }
 
 .command-row {
   display: flex;
+
   gap: 10px;
 }
 
@@ -325,27 +496,32 @@ a {
 
   min-width: 0;
 
-  border: 1px solid rgba(255,255,255,0.10);
+  border:
+    1px solid rgba(255, 255, 255, 0.10);
+
   border-radius: 12px;
 
-  background: rgba(0,0,0,0.30);
+  background:
+    rgba(0, 0, 0, 0.30);
 
   transition: 0.25s;
 }
 
 .input-wrapper:focus-within {
-  border-color: rgba(74, 222, 128, 0.65);
+  border-color:
+    rgba(66, 245, 179, 0.65);
 
   box-shadow:
-    0 0 25px rgba(34, 197, 94, 0.13);
+    0 0 25px rgba(66, 245, 179, 0.13);
 }
 
 .prompt-symbol {
   padding-left: 15px;
 
-  color: #4ade80;
+  color: #42f5b3;
 
   font-family: "JetBrains Mono", monospace;
+
   font-weight: 700;
 }
 
@@ -355,6 +531,7 @@ a {
   padding: 15px;
 
   border: none;
+
   outline: none;
 
   background: transparent;
@@ -368,46 +545,69 @@ a {
   color: #626776;
 }
 
+.input-wrapper input:disabled {
+  opacity: 0.65;
+}
+
+/* =========================================
+   BUILD BUTTON
+========================================= */
+
 .build-button {
   display: flex;
   align-items: center;
   justify-content: center;
+
   gap: 9px;
 
   min-width: 190px;
 
   border: none;
+
   border-radius: 12px;
 
-  color: white;
+  color: #03100b;
 
   background:
     linear-gradient(
       135deg,
-      #16a34a,
-      #22c55e
+      #42f5b3,
+      #20d996,
+      #55dcff
     );
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 11px;
+
   font-weight: 700;
+
   letter-spacing: 0.04em;
 
   box-shadow:
-    0 10px 35px rgba(34, 197, 94, 0.30);
+    0 10px 35px rgba(66, 245, 179, 0.25);
 
-  transition: 0.25s;
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s,
+    opacity 0.25s;
 }
 
-.build-button:hover {
+.build-button:hover:not(:disabled) {
   transform: translateY(-2px);
 
   box-shadow:
-    0 14px 40px rgba(34, 197, 94, 0.45);
+    0 14px 45px rgba(66, 245, 179, 0.40);
+}
+
+.build-button:disabled {
+  opacity: 0.55;
 }
 
 .running-button {
-  opacity: 0.8;
+  opacity: 0.85 !important;
+
+  color: #ffffff;
 }
 
 .loading-orb {
@@ -416,10 +616,10 @@ a {
 
   border-radius: 50%;
 
-  background: #55e8ff;
+  background: #ffffff;
 
   box-shadow:
-    0 0 14px #55e8ff;
+    0 0 14px #ffffff;
 
   animation: pulse 1s infinite;
 }
@@ -427,29 +627,51 @@ a {
 .reset-button {
   display: flex;
   align-items: center;
+
   gap: 7px;
 
   padding: 0 16px;
 
-  border: 1px solid rgba(255,255,255,0.10);
+  border:
+    1px solid rgba(255, 255, 255, 0.10);
+
   border-radius: 12px;
 
   color: #a2a6b4;
 
-  background: rgba(255,255,255,0.03);
+  background:
+    rgba(255, 255, 255, 0.03);
 
   font-size: 11px;
+
+  transition: 0.25s;
 }
 
-/* =========================
+.reset-button:hover:not(:disabled) {
+  color: #ffffff;
+
+  border-color:
+    rgba(66, 245, 179, 0.25);
+
+  background:
+    rgba(66, 245, 179, 0.05);
+}
+
+.reset-button:disabled {
+  opacity: 0.45;
+}
+
+/* =========================================
    NETWORK
-========================= */
+========================================= */
 
 .network-section {
   position: relative;
+
   z-index: 1;
 
   max-width: 1400px;
+
   margin: 80px auto 0;
 }
 
@@ -464,12 +686,15 @@ a {
 .section-kicker {
   display: flex;
   align-items: center;
+
   gap: 7px;
 
-  color: #4ade80;
+  color: #42f5b3;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 9px;
+
   letter-spacing: 0.14em;
 }
 
@@ -477,6 +702,7 @@ a {
   margin: 7px 0 0;
 
   font-size: 25px;
+
   letter-spacing: -0.02em;
 }
 
@@ -484,6 +710,7 @@ a {
   color: #737887;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 10px;
 }
 
@@ -499,9 +726,9 @@ a {
   color: #555967;
 }
 
-/* =========================
-   AGENT CARDS
-========================= */
+/* =========================================
+   AGENT NETWORK
+========================================= */
 
 .agent-network {
   display: flex;
@@ -519,14 +746,17 @@ a {
 
   padding: 20px;
 
-  border: 1px solid rgba(255,255,255,0.09);
+  border:
+    1px solid rgba(255, 255, 255, 0.09);
+
   border-radius: 18px;
 
   background:
     linear-gradient(
       145deg,
-      rgba(255,255,255,0.065),
-      rgba(255,255,255,0.018)
+      rgba(255, 255, 255, 0.065),
+      rgba(66, 245, 179, 0.018),
+      rgba(255, 255, 255, 0.018)
     );
 
   backdrop-filter: blur(15px);
@@ -540,25 +770,33 @@ a {
 .agent-card:hover {
   transform: translateY(-5px);
 
-  border-color: rgba(74, 222, 128, 0.40);
+  border-color:
+    rgba(66, 245, 179, 0.40);
 
   box-shadow:
-    0 20px 50px rgba(0,0,0,0.30);
+    0 20px 50px rgba(0, 0, 0, 0.30),
+    0 0 35px rgba(66, 245, 179, 0.06);
 }
 
 .agent-working {
-  border-color: rgba(83,219,255,0.55);
+  border-color:
+    rgba(85, 220, 255, 0.55);
 
   box-shadow:
-    0 0 35px rgba(83,219,255,0.10);
+    0 0 35px rgba(85, 220, 255, 0.10);
 }
 
 .agent-passed {
-  border-color: rgba(66,245,179,0.35);
+  border-color:
+    rgba(66, 245, 179, 0.35);
 }
 
 .agent-failed {
-  border-color: rgba(255,85,110,0.45);
+  border-color:
+    rgba(255, 85, 110, 0.45);
+
+  box-shadow:
+    0 0 30px rgba(255, 85, 110, 0.08);
 }
 
 .agent-top {
@@ -571,18 +809,22 @@ a {
   color: #555b6b;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 9px;
 }
 
 .agent-state {
   display: flex;
   align-items: center;
+
   gap: 6px;
 
   color: #747a8a;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 8px;
+
   letter-spacing: 0.08em;
 }
 
@@ -604,12 +846,30 @@ a {
 
   border-radius: 50%;
 
+  background: #555c69;
+}
+
+.agent-working .live-dot {
   background: #55dcff;
 
   box-shadow:
     0 0 12px #55dcff;
 
   animation: pulse 1.2s infinite;
+}
+
+.agent-passed .live-dot {
+  background: #42f5b3;
+
+  box-shadow:
+    0 0 10px #42f5b3;
+}
+
+.agent-failed .live-dot {
+  background: #ff647e;
+
+  box-shadow:
+    0 0 10px #ff647e;
 }
 
 .agent-icon-wrapper {
@@ -624,7 +884,9 @@ a {
   align-items: center;
   justify-content: center;
 
-  border: 1px solid rgba(255,255,255,0.12);
+  border:
+    1px solid rgba(255, 255, 255, 0.12);
+
   border-radius: 15px;
 
   color: #8d94a6;
@@ -632,24 +894,33 @@ a {
   background:
     linear-gradient(
       135deg,
-      rgba(34,197,94,0.13),
-      rgba(85,220,255,0.06)
+      rgba(66, 245, 179, 0.12),
+      rgba(85, 220, 255, 0.06)
     );
 }
 
 .agent-working .agent-icon-ring {
   color: #55dcff;
 
-  border-color: rgba(85,220,255,0.45);
+  border-color:
+    rgba(85, 220, 255, 0.45);
 
   box-shadow:
-    0 0 25px rgba(85,220,255,0.14);
+    0 0 25px rgba(85, 220, 255, 0.14);
 }
 
 .agent-passed .agent-icon-ring {
   color: #42f5b3;
 
-  border-color: rgba(66,245,179,0.35);
+  border-color:
+    rgba(66, 245, 179, 0.35);
+}
+
+.agent-failed .agent-icon-ring {
+  color: #ff647e;
+
+  border-color:
+    rgba(255, 100, 126, 0.35);
 }
 
 .agent-card h3 {
@@ -658,16 +929,19 @@ a {
   color: #ffffff;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 14px;
+
   letter-spacing: 0.08em;
 }
 
 .agent-role {
   margin-top: 5px;
 
-  color: #4ade80;
+  color: #42f5b3;
 
   font-size: 11px;
+
   font-weight: 600;
 }
 
@@ -679,21 +953,25 @@ a {
   color: #969baa;
 
   font-size: 11px;
+
   line-height: 1.55;
 }
 
 .agent-footer {
   display: flex;
   align-items: center;
+
   gap: 7px;
 
   padding-top: 13px;
 
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top:
+    1px solid rgba(255, 255, 255, 0.07);
 
   color: #626878;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 8px;
 }
 
@@ -709,9 +987,9 @@ a {
   color: #ff647e;
 }
 
-/* =========================
+/* =========================================
    CONNECTORS
-========================= */
+========================================= */
 
 .network-connector {
   position: relative;
@@ -730,9 +1008,9 @@ a {
   background:
     linear-gradient(
       90deg,
-      rgba(34,197,94,0.1),
-      rgba(34,197,94,0.6),
-      rgba(85,220,255,0.15)
+      rgba(66, 245, 179, 0.08),
+      rgba(66, 245, 179, 0.60),
+      rgba(85, 220, 255, 0.15)
     );
 }
 
@@ -741,7 +1019,7 @@ a {
 
   right: -3px;
 
-  color: #4d8f63;
+  color: #42b995;
 
   font-size: 16px;
 }
@@ -754,18 +1032,20 @@ a {
 
   border-radius: 50%;
 
-  background: #4ade80;
+  background: #42f5b3;
 
   box-shadow:
-    0 0 12px #4ade80;
+    0 0 12px #42f5b3;
 
-  animation: travel 2s linear infinite;
+  animation:
+    travel 2s linear infinite;
 }
 
 .execution-status {
   display: flex;
   align-items: center;
   justify-content: center;
+
   gap: 9px;
 
   margin-top: 22px;
@@ -773,7 +1053,9 @@ a {
   color: #7c8292;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 9px;
+
   letter-spacing: 0.06em;
 }
 
@@ -797,18 +1079,21 @@ a {
   color: #444957;
 }
 
-/* =========================
+/* =========================================
    OUTPUT
-========================= */
+========================================= */
 
 .output-grid {
   position: relative;
+
   z-index: 1;
 
   max-width: 1400px;
+
   margin: 60px auto 0;
 
   display: grid;
+
   grid-template-columns: 1.5fr 1fr;
 
   gap: 18px;
@@ -817,7 +1102,9 @@ a {
 .glass-panel {
   min-height: 260px;
 
-  border: 1px solid rgba(255,255,255,0.09);
+  border:
+    1px solid rgba(255, 255, 255, 0.09);
+
   border-radius: 18px;
 
   overflow: hidden;
@@ -825,11 +1112,15 @@ a {
   background:
     linear-gradient(
       145deg,
-      rgba(255,255,255,0.055),
-      rgba(255,255,255,0.018)
+      rgba(255, 255, 255, 0.055),
+      rgba(66, 245, 179, 0.015),
+      rgba(255, 255, 255, 0.018)
     );
 
   backdrop-filter: blur(15px);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 .panel-header {
@@ -839,23 +1130,28 @@ a {
 
   padding: 14px 17px;
 
-  border-bottom: 1px solid rgba(255,255,255,0.07);
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.07);
 }
 
 .panel-title {
   display: flex;
   align-items: center;
+
   gap: 8px;
 
   color: #aeb3c1;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 10px;
+
   letter-spacing: 0.08em;
 }
 
 .terminal-dots {
   display: flex;
+
   gap: 5px;
 }
 
@@ -872,42 +1168,97 @@ a {
   color: #686e7d;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 8px;
 }
 
-.output-content {
-  height: 205px;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-  text-align: center;
-}
+/* =========================================
+   EXECUTION CONSOLE
+========================================= */
 
 .terminal-body {
-  height: 205px;
+  height: 320px;
 
-  padding: 20px;
+  padding: 0;
 
   background:
     radial-gradient(
       circle at 20% 20%,
-      rgba(34,197,94,0.08),
+      rgba(66, 245, 179, 0.07),
       transparent 35%
-    );
+    ),
+    rgba(0, 0, 0, 0.22);
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 11px;
-  line-height: 2;
+
+  line-height: 1.9;
+}
+
+/*
+  THIS IS THE IMPORTANT PART.
+
+  The console has a fixed height.
+  Long Gemini errors scroll inside it.
+*/
+
+.console-output {
+  height: 100%;
+
+  overflow-y: auto;
+  overflow-x: auto;
+
+  padding: 20px;
+
+  scrollbar-width: thin;
+
+  scrollbar-color:
+    #42f5b3
+    rgba(255, 255, 255, 0.04);
+}
+
+/* Chrome / Edge / Safari */
+
+.console-output::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.console-output::-webkit-scrollbar-track {
+  background:
+    rgba(255, 255, 255, 0.025);
+
+  border-radius: 10px;
+}
+
+.console-output::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(
+      180deg,
+      #42f5b3,
+      #20c997
+    );
+
+  border-radius: 10px;
+}
+
+.console-output::-webkit-scrollbar-thumb:hover {
+  background: #42f5b3;
 }
 
 .terminal-line {
-  display: flex;
-  gap: 8px;
+  display: block;
+
+  min-width: max-content;
 
   color: #c4c7d0;
+
+  white-space: pre-wrap;
+
+  overflow-wrap: anywhere;
+
+  word-break: break-word;
 }
 
 .terminal-green {
@@ -919,7 +1270,9 @@ a {
 }
 
 .terminal-command {
-  color: #86efac;
+  margin-left: 8px;
+
+  color: #7affc7;
 }
 
 .terminal-muted {
@@ -938,6 +1291,54 @@ a {
   color: #ff647e;
 }
 
+/*
+  Full backend/API error.
+
+  It wraps long text so you can read it,
+  while the entire console remains scrollable.
+*/
+
+.terminal-error-full {
+  margin-top: 14px;
+
+  min-width: 0;
+
+  color: #ff647e;
+
+  white-space: pre-wrap;
+
+  overflow-wrap: anywhere;
+
+  word-break: break-word;
+
+  line-height: 1.9;
+}
+
+/* =========================================
+   ARTIFACT
+========================================= */
+
+.output-content {
+  height: 205px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+}
+
+.artifact-ready {
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(66, 245, 179, 0.055),
+      transparent 55%
+    );
+}
+
 .artifact-icon {
   width: 58px;
   height: 58px;
@@ -952,17 +1353,24 @@ a {
 
   color: #42f5b3;
 
-  background: rgba(66,245,179,0.08);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(66, 245, 179, 0.12),
+      rgba(85, 220, 255, 0.04)
+    );
 
   box-shadow:
-    0 0 35px rgba(66,245,179,0.10);
+    0 0 35px rgba(66, 245, 179, 0.10);
 }
 
 .artifact-name {
   color: #ffffff;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 13px;
+
   font-weight: 700;
 }
 
@@ -974,41 +1382,50 @@ a {
   color: #777d8c;
 
   font-size: 10px;
+
   line-height: 1.5;
 }
 
 .download-button {
   display: flex;
   align-items: center;
+
   gap: 8px;
 
   padding: 11px 18px;
 
-  border: 1px solid rgba(66,245,179,0.25);
+  border:
+    1px solid rgba(66, 245, 179, 0.25);
+
   border-radius: 10px;
 
   color: #42f5b3;
 
-  background: rgba(66,245,179,0.05);
+  background:
+    rgba(66, 245, 179, 0.05);
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 9px;
+
   font-weight: 700;
-  text-decoration: none;
 
   transition: 0.25s;
 }
 
 .download-button:hover {
-  background: rgba(66,245,179,0.11);
+  background:
+    rgba(66, 245, 179, 0.11);
 
   box-shadow:
-    0 0 25px rgba(66,245,179,0.12);
+    0 0 25px rgba(66, 245, 179, 0.12);
 }
 
 .empty-artifact {
   display: flex;
+
   flex-direction: column;
+
   align-items: center;
 }
 
@@ -1026,7 +1443,8 @@ a {
 
   color: #777d8c;
 
-  background: rgba(255,255,255,0.035);
+  background:
+    rgba(255, 255, 255, 0.035);
 }
 
 .empty-artifact strong {
@@ -1043,36 +1461,45 @@ a {
   color: #6d7280;
 
   font-size: 10px;
+
   line-height: 1.5;
 }
 
-/* =========================
+/* =========================================
    FOOTER
-========================= */
+========================================= */
 
 .footer {
   position: relative;
+
   z-index: 1;
 
   max-width: 1400px;
+
   margin: 60px auto 0;
+
   padding-top: 20px;
 
   display: flex;
+
   justify-content: space-between;
 
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top:
+    1px solid rgba(255, 255, 255, 0.07);
 
   color: #4e5361;
 
   font-family: "JetBrains Mono", monospace;
+
   font-size: 8px;
+
   letter-spacing: 0.08em;
 }
 
 .footer > div:last-child {
   display: flex;
   align-items: center;
+
   gap: 7px;
 }
 
@@ -1088,19 +1515,21 @@ a {
     0 0 8px #42f5b3;
 }
 
-/* =========================
+/* =========================================
    ANIMATIONS
-========================= */
+========================================= */
 
 @keyframes pulse {
   0%,
   100% {
     opacity: 0.5;
+
     transform: scale(0.85);
   }
 
   50% {
     opacity: 1;
+
     transform: scale(1.15);
   }
 }
@@ -1108,6 +1537,7 @@ a {
 @keyframes travel {
   0% {
     transform: translateX(-22px);
+
     opacity: 0;
   }
 
@@ -1121,18 +1551,35 @@ a {
 
   100% {
     transform: translateX(22px);
+
     opacity: 0;
   }
 }
 
-/* =========================
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% center;
+  }
+
+  50% {
+    background-position: 100% center;
+  }
+
+  100% {
+    background-position: 0% center;
+  }
+}
+
+/* =========================================
    RESPONSIVE
-========================= */
+========================================= */
 
 @media (max-width: 1000px) {
   .agent-network {
     display: grid;
+
     grid-template-columns: 1fr 1fr;
+
     gap: 14px;
   }
 
@@ -1166,6 +1613,10 @@ a {
     font-size: 42px;
   }
 
+  .hero-orbit {
+    display: none;
+  }
+
   .command-row {
     flex-direction: column;
   }
@@ -1173,6 +1624,10 @@ a {
   .build-button,
   .reset-button {
     min-height: 48px;
+  }
+
+  .reset-button {
+    justify-content: center;
   }
 
   .agent-network {
@@ -1187,9 +1642,13 @@ a {
     display: none;
   }
 
+  .terminal-body {
+    height: 280px;
+  }
+
   .footer {
     flex-direction: column;
+
     gap: 10px;
   }
 }
-
