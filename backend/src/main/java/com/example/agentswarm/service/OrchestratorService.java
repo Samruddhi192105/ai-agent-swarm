@@ -69,8 +69,9 @@ public class OrchestratorService {
             final int iter = iteration;
             final ReviewDecision feedback = lastDecision;
             code = record(project, AgentRun.AgentType.CODER, iter, () ->
-                    feedback == null ? coder.generate(spec) : coder.regenerate(spec, feedback));
-
+        feedback == null
+                ? coder.generate(spec)
+                : coder.regenerate(spec, toJson(feedback)));
             persistFiles(project, code, iteration);
 
             project.setStatus(Project.ProjectStatus.TESTING);
