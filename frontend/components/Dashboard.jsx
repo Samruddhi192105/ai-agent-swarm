@@ -1,605 +1,599 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
-Cpu,
-Hammer,
-FlaskConical,
-ShieldCheck,
-Download,
-Play,
-GitBranch,
-Terminal,
-RotateCcw,
-Sparkles,
-Activity,
-Zap,
-CheckCircle2,
-Circle,
+  Activity,
+  ArrowRight,
+  Bot,
+  Brain,
+  CheckCircle2,
+  CircleDot,
+  Code2,
+  Download,
+  FileCode2,
+  GitBranch,
+  Layers3,
+  Play,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Terminal,
+  TestTube2,
+  XCircle,
 } from "lucide-react";
 
-const API_URL =
-process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = "http://localhost:8080";
 
-const AGENTS = [
-{
-key: "PLANNER",
-label: "PLANNER",
-role: "Architecture Intelligence",
-desc: "Breaks your idea into a technical blueprint.",
-icon: Cpu,
-},
-{
-key: "CODER",
-label: "CODER",
-role: "Implementation Engine",
-desc: "Transforms the blueprint into working code.",
-icon: Hammer,
-},
-{
-key: "TESTER",
-label: "TESTER",
-role: "Quality Engine",
-desc: "Builds, executes and validates the project.",
-icon: FlaskConical,
-},
-{
-key: "REVIEWER",
-label: "REVIEWER",
-role: "Code Intelligence",
-desc: "Inspects the final system before delivery.",
-icon: ShieldCheck,
-},
+const agents = [
+  {
+    id: "01",
+    name: "PLANNER",
+    role: "ARCHITECT",
+    description:
+      "Analyzes the requirement and creates a structured implementation plan.",
+    icon: Brain,
+  },
+  {
+    id: "02",
+    name: "CODER",
+    role: "IMPLEMENTER",
+    description:
+      "Transforms the approved plan into a complete working codebase.",
+    icon: Code2,
+  },
+  {
+    id: "03",
+    name: "TESTER",
+    role: "VALIDATOR",
+    description:
+      "Runs tests, checks generated code and identifies implementation issues.",
+    icon: TestTube2,
+  },
+  {
+    id: "04",
+    name: "REVIEWER",
+    role: "QUALITY ENGINEER",
+    description:
+      "Reviews the final implementation for correctness and quality.",
+    icon: ShieldCheck,
+  },
 ];
 
-const STATUS_TO_AGENT = {
-PLANNING: "PLANNER",
-CODING: "CODER",
-TESTING: "TESTER",
-REVIEWING: "REVIEWER",
+const statusLabels = {
+  IDLE: "STANDBY",
+  PLANNING: "WORKING",
+  CODING: "WORKING",
+  TESTING: "WORKING",
+  REVIEWING: "WORKING",
+  PASSED: "PASSED",
+  FAILED: "FAILED",
+};
+
+const statusForAgent = (agentIndex, status) => {
+  if (!status) return "IDLE";
+
+  const order = ["PLANNING", "CODING", "TESTING", "REVIEWING"];
+
+  if (status === "FAILED") {
+    return "FAILED";
+  }
+
+  if (status === "PASSED") {
+    return "PASSED";
+  }
+
+  const currentIndex = order.indexOf(status);
+
+  if (currentIndex === -1) {
+    return "IDLE";
+  }
+
+  if (agentIndex < currentIndex) {
+    return "PASSED";
+  }
+
+  if (agentIndex === currentIndex) {
+    return status;
+  }
+
+  return "IDLE";
 };
 
 export default function Dashboard() {
-const [prompt, setPrompt] = useState(
-"Build me a REST API for a Todo application"
-);
+  const [prompt, setPrompt] = useState("");
+  const [status, setStatus] = useState("IDLE");
+  const [projectId, setProjectId] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-const [project, setProject] = useState(null);
-const [phase, setPhase] = useState("idle");
-const [error, setError] = useState(null);
-const pollRef = useRef(null);
-
-useEffect(() => {
-return () => clearInterval(pollRef.current);
-}, []);
-
-const startBuild = async () => {
-if (!prompt.trim()) return;
-
-setPhase("running");
-setError(null);
-setProject(null);
-
-try {
-  const res = await fetch(`${API_URL}/api/projects`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const [executionLogs, setExecutionLogs] = useState([
+    {
+      type: "command",
+      text: "initialize --agents=4",
     },
-    body: JSON.stringify({
-      prompt: prompt.trim(),
-    }),
-  });
+    {
+      type: "muted",
+      text: "Awaiting project initialization...",
+    },
+  ]);
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+  const addLog = (type, text) => {
+    setExecutionLogs((previous) => [
+      ...previous,
+      {
+        type,
+        text,
+      },
+    ]);
+  };
 
-    throw new Error(
-      body.error || `Request failed (${res.status})`
+  const buildProject = async () => {
+    if (!prompt.trim() || loading) {
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setProjectId(null);
+    setStatus("PLANNING");
+
+    setExecutionLogs([
+      {
+        type: "command",
+        text: `initialize --agents=4`,
+      },
+      {
+        type: "green",
+        text: "Swarm initialized.",
+      },
+      {
+        type: "muted",
+        text: "Planner agent started...",
+      },
+    ]);
+
+    try {
+      const response = await fetch(`${API_URL}/api/projects`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+        }),
+      });
+
+      const rawText = await response.text();
+
+      let data = null;
+
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        const backendError =
+          data?.message ||
+          data?.error ||
+          data?.details ||
+          rawText ||
+          `Request failed with status ${response.status}`;
+
+        throw new Error(backendError);
+      }
+
+      const returnedId = data?.id ?? data?.projectId ?? data?.project?.id;
+
+      if (returnedId !== undefined && returnedId !== null) {
+        setProjectId(returnedId);
+      }
+
+      const returnedStatus =
+        data?.status ||
+        data?.project?.status ||
+        "PASSED";
+
+      setStatus(returnedStatus);
+
+      addLog("green", "Project orchestration completed.");
+      addLog("green", `Final status: ${returnedStatus}`);
+
+      if (returnedId !== undefined && returnedId !== null) {
+        addLog("muted", `Project ID: ${returnedId}`);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : String(err);
+
+      setStatus("FAILED");
+      setError(message);
+
+      addLog("error", `ERROR: ${message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetDashboard = () => {
+    setPrompt("");
+    setStatus("IDLE");
+    setProjectId(null);
+    setError("");
+    setLoading(false);
+
+    setExecutionLogs([
+      {
+        type: "command",
+        text: "initialize --agents=4",
+      },
+      {
+        type: "muted",
+        text: "Awaiting project initialization...",
+      },
+    ]);
+  };
+
+  const downloadProject = () => {
+    if (!projectId) return;
+
+    window.open(
+      `${API_URL}/api/projects/${projectId}/download`,
+      "_blank"
     );
-  }
+  };
 
-  const data = await res.json();
-
-  setProject(data);
-
-  if (data.status === "PASSED") {
-    setPhase("done");
-  } else {
-    setPhase("error");
-  }
-} catch (e) {
-  setError(e.message);
-  setPhase("error");
-}
-
-};
-
-const reset = () => {
-clearInterval(pollRef.current);
-setProject(null);
-setPhase("idle");
-setError(null);
-};
-
-const activeAgent = project
-? STATUS_TO_AGENT[project.status]
-: null;
-
-const getAgentStatus = (agentKey) => {
-if (!project) return "idle";
-
-if (project.status === "PASSED") {
-  return "passed";
-}
-
-if (project.status === "FAILED") {
-  return "failed";
-}
-
-if (agentKey === activeAgent) {
-  return "working";
-}
-
-return "idle";
-
-};
-
-const getStatusText = (status) => {
-switch (status) {
-case "working":
-return "ACTIVE";
-case "passed":
-return "COMPLETE";
-case "failed":
-return "FAILED";
-default:
-return "STANDBY";
-}
-};
-
-return ( <main className="swarm-page">
-
-  {/* BACKGROUND EFFECTS */}
-  <div className="ambient ambient-one" />
-  <div className="ambient ambient-two" />
-  <div className="grid-background" />
-
-  {/* HEADER */}
-  <header className="topbar">
-
-    <div className="brand-area">
-      <div className="brand-icon">
-        <Sparkles size={20} />
-      </div>
-
-      <div>
-        <div className="brand-title">
-          AGENT<span>SWARM</span>
-        </div>
-
-        <div className="brand-subtitle">
-          AUTONOMOUS SOFTWARE ENGINEERING SYSTEM
-        </div>
-      </div>
-    </div>
-
-    <div className="system-status">
-      <span className="status-light" />
-      SYSTEM ONLINE
-    </div>
-
-  </header>
-
-
-  {/* HERO */}
-  <section className="hero-section">
-
-    <div className="hero-badge">
-      <Zap size={13} />
-      MULTI-AGENT DEVELOPMENT ENGINE
-    </div>
-
-    <h1>
-      Describe it.
-      <br />
-      <span>Let the swarm build it.</span>
-    </h1>
-
-    <p>
-      Four specialized AI agents collaborate to plan, code,
-      test and review your software automatically.
-    </p>
-
-  </section>
-
-
-  {/* COMMAND CENTER */}
-  <section className="command-panel">
-
-    <div className="command-label">
-      <Terminal size={14} />
-      BUILD COMMAND
-    </div>
-
-    <div className="command-row">
-
-      <div className="input-wrapper">
-        <span className="prompt-symbol">&gt;</span>
-
-        <input
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe the software you want to build..."
-          disabled={phase === "running"}
+  return (
+    <main className="swarm-page">
+      {/* BACKGROUND IMAGE */}
+      <div className="image-background">
+        <img
+          src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=2200&q=85"
+          alt=""
         />
       </div>
 
-      {phase !== "running" ? (
-        <button
-          className="build-button"
-          onClick={startBuild}
-        >
-          <Play size={16} fill="currentColor" />
-          INITIALIZE BUILD
-        </button>
-      ) : (
-        <button
-          className="build-button running-button"
-          disabled
-        >
-          <span className="loading-orb" />
-          SWARM ACTIVE
-        </button>
-      )}
+      {/* BACKGROUND LAYERS */}
+      <div className="background-overlay" />
+      <div className="grid-background" />
 
-      {(phase === "done" || phase === "error") && (
-        <button
-          className="reset-button"
-          onClick={reset}
-        >
-          <RotateCcw size={15} />
-          NEW BUILD
-        </button>
-      )}
+      <div className="ambient ambient-one" />
+      <div className="ambient ambient-two" />
+      <div className="ambient ambient-three" />
 
-    </div>
+      {/* HEADER */}
+      <header className="topbar">
+        <div className="brand-area">
+          <div className="brand-icon">
+            <Layers3 size={21} strokeWidth={2.2} />
+          </div>
 
-  </section>
+          <div>
+            <div className="brand-title">
+              AI <span>AGENT SWARM</span>
+            </div>
 
-
-  {/* AGENT NETWORK */}
-  <section className="network-section">
-
-    <div className="section-heading">
-
-      <div>
-        <div className="section-kicker">
-          <Activity size={14} />
-          NEURAL WORKFLOW
+            <div className="brand-subtitle">
+              AUTONOMOUS SOFTWARE ENGINEERING SYSTEM
+            </div>
+          </div>
         </div>
 
-        <h2>Agent Network</h2>
-      </div>
+        <div className="system-status">
+          <span className="status-light" />
+          SYSTEM ONLINE
+        </div>
+      </header>
 
-      <div className="iteration">
-        ITERATIONS
-        <strong>
-          {project?.currentIteration || 0}
-        </strong>
-        <span>/ 2</span>
-      </div>
+      {/* HERO */}
+      <section className="hero-section">
+        <div className="hero-orbit hero-orbit-one" />
+        <div className="hero-orbit hero-orbit-two" />
 
-    </div>
+        <div className="hero-badge">
+          <Sparkles size={12} />
+          MULTI-AGENT DEVELOPMENT ENGINE
+        </div>
 
+        <h1>
+          Build software
+          <br />
+          <span>with autonomous agents.</span>
+        </h1>
 
-    <div className="agent-network">
+        <p>
+          Describe what you want to build. The swarm plans,
+          implements, tests and reviews the project automatically.
+        </p>
+      </section>
 
-      {AGENTS.map((agent, index) => {
+      {/* COMMAND PANEL */}
+      <section className="command-panel">
+        <div className="command-label">
+          <Terminal size={13} />
+          PROJECT COMMAND
+        </div>
 
-        const Icon = agent.icon;
-        const status = getAgentStatus(agent.key);
+        <div className="command-row">
+          <div className="input-wrapper">
+            <span className="prompt-symbol">&gt;_</span>
 
-        return (
-          <React.Fragment key={agent.key}>
+            <input
+              type="text"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  buildProject();
+                }
+              }}
+              placeholder="Describe the project you want the swarm to build..."
+              disabled={loading}
+            />
+          </div>
 
-            <div
-              className={`agent-card agent-${status}`}
-            >
+          <button
+            className={`build-button ${
+              loading ? "running-button" : ""
+            }`}
+            onClick={buildProject}
+            disabled={loading || !prompt.trim()}
+          >
+            {loading ? (
+              <>
+                <span className="loading-orb" />
+                SWARM RUNNING
+              </>
+            ) : (
+              <>
+                <Play size={14} fill="currentColor" />
+                INITIALIZE SWARM
+              </>
+            )}
+          </button>
 
-              <div className="agent-top">
+          <button
+            className="reset-button"
+            onClick={resetDashboard}
+            disabled={loading}
+          >
+            <RotateCcw size={13} />
+            RESET
+          </button>
+        </div>
+      </section>
 
-                <span className="agent-number">
-                  0{index + 1}
-                </span>
+      {/* AGENT NETWORK */}
+      <section className="network-section">
+        <div className="section-heading">
+          <div>
+            <div className="section-kicker">
+              <Activity size={11} />
+              AGENT NETWORK
+            </div>
 
-                <span className="agent-state">
-                  {status === "working" && (
+            <h2>Autonomous execution pipeline</h2>
+          </div>
+
+          <div className="iteration">
+            ITERATION
+            <strong>01</strong>
+            <span>/ 01</span>
+          </div>
+        </div>
+
+        <div className="agent-network">
+          {agents.map((agent, index) => {
+            const AgentIcon = agent.icon;
+            const agentStatus = statusForAgent(index, status);
+
+            return (
+              <div
+                className={`agent-card agent-${agentStatus.toLowerCase()}`}
+                key={agent.id}
+              >
+                <div className="agent-top">
+                  <span className="agent-number">
+                    NODE_{agent.id}
+                  </span>
+
+                  <span className="agent-state">
                     <span className="live-dot" />
+                    {statusLabels[agentStatus]}
+                  </span>
+                </div>
+
+                <div className="agent-icon-wrapper">
+                  <div className="agent-icon-ring">
+                    <AgentIcon size={25} strokeWidth={1.8} />
+                  </div>
+                </div>
+
+                <h3>{agent.name}</h3>
+
+                <div className="agent-role">
+                  {agent.role}
+                </div>
+
+                <p>{agent.description}</p>
+
+                <div className="agent-footer">
+                  {agentStatus === "PASSED" ? (
+                    <>
+                      <CheckCircle2 size={11} />
+                      EXECUTION COMPLETE
+                    </>
+                  ) : agentStatus === "FAILED" ? (
+                    <>
+                      <XCircle size={11} />
+                      EXECUTION FAILED
+                    </>
+                  ) : agentStatus === "PLANNING" ||
+                    agentStatus === "CODING" ||
+                    agentStatus === "TESTING" ||
+                    agentStatus === "REVIEWING" ? (
+                    <>
+                      <CircleDot size={11} />
+                      PROCESSING
+                    </>
+                  ) : (
+                    <>
+                      <CircleDot size={11} />
+                      STANDBY
+                    </>
                   )}
-
-                  {getStatusText(status)}
-                </span>
-
-              </div>
-
-
-              <div className="agent-icon-wrapper">
-                <div className="agent-icon-ring">
-                  <Icon size={28} strokeWidth={1.5} />
                 </div>
               </div>
+            );
+          })}
+        </div>
 
+        <div className="execution-status">
+          <span className="execution-pulse" />
 
-              <h3>{agent.label}</h3>
+          SWARM STATUS:
+          <strong>
+            {status === "IDLE"
+              ? "READY"
+              : status === "FAILED"
+              ? "FAILED"
+              : status === "PASSED"
+              ? "COMPLETE"
+              : status}
+          </strong>
 
-              <div className="agent-role">
-                {agent.role}
+          <span className="separator">/</span>
+
+          <span>4 AGENTS</span>
+        </div>
+      </section>
+
+      {/* OUTPUT */}
+      <section className="output-grid">
+        {/* EXECUTION CONSOLE */}
+        <div className="glass-panel console-panel">
+          <div className="panel-header">
+            <div className="panel-title">
+              <Terminal size={13} />
+              EXECUTION CONSOLE
+            </div>
+
+            <div className="terminal-dots">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+
+          {/* IMPORTANT:
+              This wrapper makes long errors scrollable.
+          */}
+          <div className="terminal-body">
+            <div className="console-output">
+              {executionLogs.map((log, index) => (
+                <div
+                  className={`terminal-line terminal-${log.type}`}
+                  key={`${log.type}-${index}`}
+                >
+                  {log.type === "command" ? (
+                    <>
+                      <span className="terminal-green">
+                        swarm@engine
+                      </span>
+
+                      <span className="terminal-white">
+                        :~$
+                      </span>
+
+                      <span className="terminal-command">
+                        {log.text}
+                      </span>
+                    </>
+                  ) : (
+                    <span>{log.text}</span>
+                  )}
+                </div>
+              ))}
+
+              {error && (
+                <div className="terminal-error-full">
+                  {error}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* BUILD ARTIFACT */}
+        <div className="glass-panel">
+          <div className="panel-header">
+            <div className="panel-title">
+              <FileCode2 size={13} />
+              BUILD ARTIFACT
+            </div>
+
+            <div className="artifact-state">
+              {projectId ? "AVAILABLE" : "WAITING"}
+            </div>
+          </div>
+
+          {projectId ? (
+            <div className="output-content artifact-ready">
+              <div className="artifact-icon">
+                <FileCode2 size={28} />
               </div>
 
-              <p>{agent.desc}</p>
+              <div className="artifact-name">
+                Generated Project
+              </div>
 
+              <div className="artifact-description">
+                Your autonomous software project has been
+                generated by the agent swarm.
+              </div>
 
-              <div className="agent-footer">
+              <button
+                className="download-button"
+                onClick={downloadProject}
+              >
+                <Download size={13} />
+                DOWNLOAD PROJECT
+              </button>
+            </div>
+          ) : (
+            <div className="output-content">
+              <div className="empty-artifact">
+                <div className="empty-icon">
+                  <Bot size={23} />
+                </div>
 
-                {status === "passed" ? (
-                  <CheckCircle2 size={15} />
-                ) : (
-                  <Circle size={15} />
-                )}
+                <strong>No artifact generated</strong>
 
                 <span>
-                  {status === "working"
-                    ? "PROCESSING TASK"
-                    : status === "passed"
-                    ? "TASK VERIFIED"
-                    : status === "failed"
-                    ? "TASK FAILED"
-                    : "AWAITING INPUT"}
+                  Start a swarm execution to generate
+                  your project.
                 </span>
-
               </div>
-
             </div>
+          )}
+        </div>
+      </section>
 
-
-            {index < AGENTS.length - 1 && (
-              <div className="network-connector">
-
-                <div className="connector-core" />
-
-                <div className="connector-line" />
-
-                <div className="connector-arrow">
-                  →
-                </div>
-
-              </div>
-            )}
-
-          </React.Fragment>
-        );
-      })}
-
-    </div>
-
-
-    {project && (
-      <div className="execution-status">
-
-        <span className="execution-pulse" />
-
-        <span>
-          SWARM EXECUTION
-        </span>
-
-        <strong>
-          {project.status}
-        </strong>
-
-        <span className="separator">•</span>
-
-        ITERATION{" "}
-        {project.currentIteration || 1} / 3
-
-      </div>
-    )}
-
-  </section>
-
-
-  {/* OUTPUT AREA */}
-  <section className="output-grid">
-
-    {/* TERMINAL */}
-    <div className="glass-panel terminal-panel">
-
-      <div className="panel-header">
-
-        <div className="panel-title">
-          <Terminal size={15} />
-          EXECUTION CONSOLE
+      {/* FOOTER */}
+      <footer className="footer">
+        <div>
+          AI AGENT SWARM
+          <span className="separator"> • </span>
+          AUTONOMOUS DEVELOPMENT
         </div>
 
-        <div className="terminal-dots">
-          <span />
-          <span />
-          <span />
+        <div>
+          <span className="footer-online" />
+          ALL SYSTEMS OPERATIONAL
         </div>
-
-      </div>
-
-
-      <div className="terminal-body">
-
-        <div className="terminal-line">
-          <span className="terminal-green">
-            swarm@engine
-          </span>
-
-          <span className="terminal-white">
-            :~$
-          </span>
-
-          <span className="terminal-command">
-            initialize --agents=4
-          </span>
-        </div>
-
-
-        {error && (
-          <div className="terminal-error">
-            ERROR: {error}
-          </div>
-        )}
-
-
-        {!error && !project && (
-          <>
-            <div className="terminal-muted">
-              waiting for build command...
-            </div>
-
-            <div className="terminal-muted">
-              four agents standing by.
-            </div>
-          </>
-        )}
-
-
-        {project && (
-          <>
-            <div className="terminal-success">
-              ✓ project pipeline initialized
-            </div>
-
-            <div className="terminal-line">
-              <span className="terminal-green">
-                project:
-              </span>
-
-              <span>
-                #{project.id}
-              </span>
-            </div>
-
-            <div className="terminal-line">
-              <span className="terminal-green">
-                name:
-              </span>
-
-              <span>
-                {project.projectName || "unnamed"}
-              </span>
-            </div>
-
-            <div className="terminal-line">
-              <span className="terminal-green">
-                status:
-              </span>
-
-              <span>
-                {project.status}
-              </span>
-            </div>
-          </>
-        )}
-
-      </div>
-
-    </div>
-
-
-    {/* OUTPUT */}
-    <div className="glass-panel output-panel">
-
-      <div className="panel-header">
-
-        <div className="panel-title">
-          <GitBranch size={15} />
-          BUILD ARTIFACT
-        </div>
-
-        <span className="artifact-state">
-          {project?.status === "PASSED"
-            ? "READY"
-            : "WAITING"}
-        </span>
-
-      </div>
-
-
-      <div className="output-content">
-
-        {project?.status === "PASSED" ? (
-
-          <>
-            <div className="artifact-icon">
-              <CheckCircle2 size={30} />
-            </div>
-
-            <div className="artifact-name">
-              {project.projectName}.zip
-            </div>
-
-            <div className="artifact-description">
-              Build verified successfully.
-              Your generated project is ready.
-            </div>
-
-            <a
-              href={`${API_URL}/api/projects/${project.id}/download`}
-              className="download-button"
-            >
-              <Download size={16} />
-              DOWNLOAD PROJECT
-            </a>
-          </>
-
-        ) : (
-
-          <div className="empty-artifact">
-
-            <div className="empty-icon">
-              <Cpu size={25} />
-            </div>
-
-            <strong>
-              Artifact unavailable
-            </strong>
-
-            <span>
-              Complete the agent workflow to
-              generate your project package.
-            </span>
-
-          </div>
-
-        )}
-
-      </div>
-
-    </div>
-
-  </section>
-
-
-  {/* FOOTER */}
-  <footer className="footer">
-
-    <div>
-      AGENT SWARM / AUTONOMOUS BUILD SYSTEM
-    </div>
-
-    <div>
-      <span className="footer-online" />
-      ALL SYSTEMS NOMINAL
-    </div>
-
-  </footer>
-
-</main>
-
-
-);
+      </footer>
+    </main>
+  );
 }
