@@ -24,7 +24,7 @@ public class CoderAgent {
      * for each public class/interface instead of combining
      * multiple public types into invalid Java files.
      */
-    private static final int MAX_FILES = 16;
+    private static final int MAX_FILES = 20;
 
     private static final int MAX_FILE_SIZE = 512 * 1024;
 
@@ -110,8 +110,25 @@ public class CoderAgent {
                 - PostgreSQL when required
                 - JUnit when testing is required
                 - Docker
+                - Docker Compose when PostgreSQL is required
 
                 Keep the implementation small, clean, and functional.
+
+                DOCKER REQUIREMENTS:
+
+                - The generated application must be runnable inside Docker.
+                - The Dockerfile must use a proper multi-stage Maven build.
+                - Do not assume Maven is installed in the final runtime image.
+                - Use a Maven builder image for compilation.
+                - Use a lightweight Java 21 runtime image for the final application.
+                - The final image must run the generated Spring Boot JAR.
+                - Do not use ./mvnw unless Maven wrapper files are also generated.
+                - When PostgreSQL is required, generate docker-compose.yml.
+                - docker-compose.yml must contain both the application service and PostgreSQL service.
+                - The application container must connect to PostgreSQL using the Docker Compose service name, never localhost.
+                - Database configuration must support environment variables.
+                - Do not hardcode database passwords or API keys.
+                - Use sensible environment variable defaults where appropriate.
 
                 Only implement requested functionality.
                 Do not add unrelated features.
@@ -127,7 +144,7 @@ public class CoderAgent {
 
                 FILE STRUCTURE RULES:
 
-                - Maximum 16 files.
+                - Maximum 20 files.
                 - Every public Java class MUST be in its own .java file.
                 - Every public Java interface MUST be in its own .java file.
                 - Every public Java enum MUST be in its own .java file.
@@ -142,6 +159,9 @@ public class CoderAgent {
                 REQUIRED:
                 - pom.xml
                 - Dockerfile
+
+                When PostgreSQL is required:
+                - docker-compose.yml
 
                 OUTPUT:
 
@@ -299,12 +319,70 @@ public class CoderAgent {
                 - Maximum 16 files.
                 - Include pom.xml.
                 - Include Dockerfile.
+                - If PostgreSQL is required, include docker-compose.yml.
                 - Implement only requested functionality.
+
+                DOCKER IMPLEMENTATION:
+
+                - Dockerfile must build the Spring Boot application using Maven.
+                - Use a Maven builder stage.
+                - Use Java 21 runtime for the final image.
+                - The final image must run the generated JAR.
+                - Do not depend on Maven being installed in the runtime image.
+                - Do not use ./mvnw unless Maven wrapper files are included.
+                - If PostgreSQL is required, docker-compose.yml must define:
+                  1. application service
+                  2. PostgreSQL service
+                - The application service must depend on PostgreSQL.
+                - The application must connect to PostgreSQL using the PostgreSQL service name.
+                - Never use localhost for PostgreSQL communication between containers.
+                - Database URL, username, and password must be configurable using environment variables.
+                - Never hardcode secrets.
                 - Keep Java classes concise.
                 - Keep tests concise.
                 - No README.
                 - No documentation.
                 - No unnecessary files.
+
+                DOCKERFILE EXPECTATION:
+
+                Use a structure similar to:
+
+                FROM maven:3.9-eclipse-temurin-21 AS build
+                WORKDIR /app
+                COPY pom.xml .
+                COPY src ./src
+                RUN mvn -B clean package -DskipTests
+
+                FROM eclipse-temurin:21-jre
+                WORKDIR /app
+                COPY --from=build /app/target/*.jar app.jar
+                EXPOSE 8080
+                ENTRYPOINT ["java", "-jar", "app.jar"]
+
+                Do not copy this example literally if the project requires different configuration.
+                Adapt it to the generated project.
+
+                DOCKER COMPOSE EXPECTATION FOR POSTGRESQL:
+
+                services:
+                app:
+                build: .
+                depends_on:
+                - postgres
+                environment:
+                DB_HOST: postgres
+                DB_PORT: 5432
+                DB_NAME: <database>
+                DB_USER: <username>
+                DB_PASSWORD: <password>
+
+                postgres:
+                image: postgres:16
+                environment:
+                POSTGRES_DB: <database>
+                POSTGRES_USER: <username>
+                POSTGRES_PASSWORD: <password>
 
                 JAVA FILE STRUCTURE:
 
