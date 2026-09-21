@@ -1,5 +1,7 @@
 "use client";
 
+import CinematicBackground from "./CinematicBackground";
+
 import { useState } from "react";
 import {
   Activity,
@@ -248,12 +250,8 @@ export default function Dashboard() {
   return (
     <main className="swarm-page">
       {/* BACKGROUND IMAGE */}
-      <div className="image-background">
-        <img
-          src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=2200&q=85"
-          alt=""
-        />
-      </div>
+      {/* CINEMATIC VIDEO BACKGROUND */}
+      <CinematicBackground />
 
       {/* BACKGROUND LAYERS */}
       <div className="background-overlay" />
@@ -276,7 +274,7 @@ export default function Dashboard() {
             </div>
 
             <div className="brand-subtitle">
-              AUTONOMOUS SOFTWARE ENGINEERING SYSTEM
+              AUTONOMOUS SOFTWARE DEVELOPEMENT SYSTEM
             </div>
           </div>
         </div>
@@ -333,7 +331,7 @@ export default function Dashboard() {
               disabled={loading}
             />
           </div>
-
+          <div className="command-actions">
           <button
             className={`build-button ${
               loading ? "running-button" : ""
@@ -362,6 +360,7 @@ export default function Dashboard() {
             <RotateCcw size={13} />
             RESET
           </button>
+        </div>
         </div>
       </section>
 
@@ -516,12 +515,6 @@ export default function Dashboard() {
                   )}
                 </div>
               ))}
-
-              {error && (
-                <div className="terminal-error-full">
-                  {error}
-                </div>
-              )}
             </div>
           </div>
         </div>
