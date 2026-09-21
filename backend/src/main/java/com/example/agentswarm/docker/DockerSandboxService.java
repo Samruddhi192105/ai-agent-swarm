@@ -5,6 +5,7 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.WaitContainerResultCallback;
 import com.github.dockerjava.api.model.Bind;
+import com.github.dockerjava.api.model.Volume;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.async.ResultCallback;
@@ -91,21 +92,20 @@ public class DockerSandboxService {
                             + System.currentTimeMillis();
 
             HostConfig hostConfig =
-                    HostConfig.newHostConfig()
-                            .withBinds(
-                                    Bind.parse(
-                                            workDir
-                                                    .toAbsolutePath()
-                                                    + ":/workspace"
-                                    )
-                            )
-                            .withMemory(
-                                    memoryLimitMb
-                                            * 1024
-                                            * 1024
-                            )
-                            .withNetworkMode("bridge")
-                            .withAutoRemove(false);
+        HostConfig.newHostConfig()
+                .withBinds(
+                        new Bind(
+                                "agentswarm_workspace",
+                                new com.github.dockerjava.api.model.Volume("/workspace")
+                        )
+                )
+                .withMemory(
+                        memoryLimitMb
+                                * 1024
+                                * 1024
+                )
+                .withNetworkMode("bridge")
+                .withAutoRemove(false);
 
             System.out.println(
                     "Docker image: " + buildImage
@@ -119,7 +119,9 @@ public class DockerSandboxService {
                     dockerClient
                             .createContainerCmd(buildImage)
                             .withName(containerName)
-                            .withWorkingDir("/workspace")
+                            .withWorkingDir(
+                                "/workspace/project-" + projectId + "/iter-" + iteration
+)
                             .withCmd(
                                     "sh",
                                     "-c",

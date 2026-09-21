@@ -6,9 +6,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Component
 public class GeminiProvider implements LLMProvider {
@@ -23,7 +25,9 @@ public class GeminiProvider implements LLMProvider {
     private String model;
 
     private static final String ENDPOINT =
-            "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+            "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
+
+    private static final int MAX_RETRIES = 4;
 
     public GeminiProvider(RestClient restClient) {
         this.restClient = restClient;
@@ -34,100 +38,194 @@ public class GeminiProvider implements LLMProvider {
 
         System.out.println();
         System.out.println("========================================");
-        System.out.println("GEMINI REQUEST");
+        System.out.println(">>> GEMINI PROVIDER");
         System.out.println("========================================");
         System.out.println("Model: " + model);
-        System.out.println("System prompt length: "
-                + (systemPrompt == null ? 0 : systemPrompt.length()));
-        System.out.println("User prompt length: "
-                + (userPrompt == null ? 0 : userPrompt.length()));
-        System.out.println();
-        System.out.println("USER PROMPT:");
-        System.out.println("----------------------------------------");
-        System.out.println(userPrompt);
-        System.out.println("----------------------------------------");
-        System.out.println();
+        System.out.println("System prompt length: " + systemPrompt.length());
+        System.out.println("User prompt length: " + userPrompt.length());
 
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException(
-                    "Gemini API key is missing. Set GEMINI_API_KEY in the environment."
+                    "GEMINI_API_KEY is missing or empty."
             );
         }
 
-        String combinedPrompt;
-
-        if (systemPrompt == null || systemPrompt.isBlank()) {
-            combinedPrompt = userPrompt;
-        } else {
-            combinedPrompt = systemPrompt + "\n\n" + userPrompt;
-        }
+        String combinedPrompt =
+                systemPrompt
+                        + "\n\n"
+                        + userPrompt;
 
         Map<String, Object> generationConfig = Map.of(
                 "responseMimeType", "application/json",
                 "candidateCount", 1,
-                "maxOutputTokens", 24000,
-                "thinkingConfig", Map.of(
-                        "thinkingLevel", "minimal"
-                )
-        );
+                "maxOutputTokens", 24000
+                );
 
-        Map<String, Object> body = Map.of(
-                "contents",
-                List.of(
-                        Map.of(
-                                "parts",
-                                List.of(
-                                        Map.of(
-                                                "text",
-                                                combinedPrompt
+        Map<String, Object> body =
+                Map.of(
+                        "contents",
+                        List.of(
+                                Map.of(
+                                        "parts",
+                                        List.of(
+                                                Map.of(
+                                                        "text",
+                                                        combinedPrompt
+                                                )
                                         )
                                 )
-                        )
-                ),
-                "generationConfig",
-                generationConfig
-        );
+                        ),
+                        "generationConfig",
+                        generationConfig
+                );
 
         String url = String.format(
                 ENDPOINT,
-                model,
-                apiKey
+                model
         );
+
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+
+            try {
+
+                System.out.println(
+                        "Gemini request attempt "
+                                + attempt
+                                + "/"
+                                + MAX_RETRIES
+                );
+
+                String response =
+                        restClient.post()
+                                .uri(url)
+                                .header(
+                                        "x-goog-api-key",
+                                        apiKey
+                                )
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .body(body)
+                                .retrieve()
+                                .body(String.class);
+
+                if (response == null || response.isBlank()) {
+                    throw new RuntimeException(
+                            "Gemini returned an empty response."
+                    );
+                }
+
+                System.out.println(
+                        "Gemini request successful."
+                );
+
+                return extractText(response);
+
+            } catch (RestClientResponseException e) {
+
+                int status = e.getStatusCode().value();
+
+                System.out.println(
+                        "Gemini HTTP error: "
+                                + status
+                );
+
+                System.out.println(
+                        "Gemini error body: "
+                                + e.getResponseBodyAsString()
+                );
+
+                if (!isRetryable(status)
+                        || attempt == MAX_RETRIES) {
+
+                    throw new RuntimeException(
+                            "Gemini request failed with HTTP "
+                                    + status
+                                    + ": "
+                                    + e.getResponseBodyAsString(),
+                            e
+                    );
+                }
+
+                long delay =
+                        calculateBackoff(attempt);
+
+                System.out.println(
+                        "Temporary Gemini error."
+                );
+
+                System.out.println(
+                        "Retrying in "
+                                + delay
+                                + " ms..."
+                );
+
+                sleep(delay);
+
+            } catch (RuntimeException e) {
+
+                /*
+                 * Do not retry normal application/parsing errors.
+                 * These are not temporary Gemini availability problems.
+                 */
+                System.out.println(
+                        "Gemini request failed: "
+                                + e.getMessage()
+                );
+
+                throw e;
+
+            } catch (Exception e) {
+
+                throw new RuntimeException(
+                        "Unexpected error while calling Gemini.",
+                        e
+                );
+            }
+        }
+
+        throw new RuntimeException(
+                "Gemini request failed after all retry attempts."
+        );
+    }
+
+    private boolean isRetryable(int status) {
+
+        return status == 429
+                || status == 500
+                || status == 502
+                || status == 503
+                || status == 504;
+    }
+
+    private long calculateBackoff(int attempt) {
+
+        long baseDelay;
+
+        switch (attempt) {
+            case 1 -> baseDelay = 2000;
+            case 2 -> baseDelay = 4000;
+            case 3 -> baseDelay = 8000;
+            default -> baseDelay = 16000;
+        }
+
+        long jitter =
+                ThreadLocalRandom.current()
+                        .nextLong(0, 1000);
+
+        return baseDelay + jitter;
+    }
+
+    private void sleep(long milliseconds) {
 
         try {
 
-            String response = restClient
-                    .post()
-                    .uri(url)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
+            Thread.sleep(milliseconds);
 
-            if (response == null || response.isBlank()) {
-                throw new RuntimeException(
-                        "Gemini returned an empty response."
-                );
-            }
+        } catch (InterruptedException e) {
 
-            return extractText(response);
-
-        } catch (RuntimeException e) {
-
-            System.err.println();
-            System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            System.err.println("GEMINI REQUEST FAILED");
-            System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            System.err.println(e.getMessage());
-            System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            System.err.println();
-
-            throw e;
-
-        } catch (Exception e) {
+            Thread.currentThread().interrupt();
 
             throw new RuntimeException(
-                    "Gemini request failed: " + e.getMessage(),
+                    "Gemini retry interrupted.",
                     e
             );
         }
@@ -137,154 +235,89 @@ public class GeminiProvider implements LLMProvider {
 
         try {
 
-            JsonNode root = mapper.readTree(rawJson);
+            JsonNode root =
+                    mapper.readTree(rawJson);
 
-            JsonNode candidates = root.path("candidates");
+            JsonNode candidates =
+                    root.path("candidates");
 
-            if (!candidates.isArray() || candidates.isEmpty()) {
+            if (!candidates.isArray()
+                    || candidates.isEmpty()) {
 
-                JsonNode error = root.path("error");
+                JsonNode error =
+                        root.path("error");
 
-                if (!error.isMissingNode()) {
-
-                    String message =
-                            error.path("message").asText("");
-
-                    String status =
-                            error.path("status").asText("");
-
-                    throw new RuntimeException(
-                            "Gemini API error"
-                                    + (status.isBlank()
-                                    ? ""
-                                    : " [" + status + "]")
-                                    + ": "
-                                    + (message.isBlank()
-                                    ? rawJson
-                                    : message)
-                    );
-                }
-
-                throw new RuntimeException(
-                        "Gemini returned no candidates: " + rawJson
-                );
-            }
-
-            JsonNode candidate = candidates.get(0);
-
-            String finishReason =
-                    candidate
-                            .path("finishReason")
-                            .asText("");
-
-            System.out.println(
-                    "Gemini finish reason: " + finishReason
-            );
-
-            /*
-             * Gemini RECITATION response.
-             */
-            if ("RECITATION".equalsIgnoreCase(finishReason)) {
-
-                System.err.println();
-                System.err.println(
-                        "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                );
-                System.err.println(
-                        "GEMINI RECITATION BLOCK"
-                );
-                System.err.println(
-                        "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                );
-                System.err.println(
-                        "Model: " + model
-                );
-                System.err.println(
-                        "Finish reason: " + finishReason
-                );
-                System.err.println(
-                        "Gemini blocked the generated content."
-                );
-                System.err.println(
-                        "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                );
-                System.err.println();
-
-                throw new RuntimeException(
-                        "Gemini blocked the generated content because it "
-                                + "resembled existing copyrighted material. "
-                                + "The generation request must be rewritten "
-                                + "to request an original implementation."
-                );
-            }
-
-            /*
-             * Other unsuccessful finish reasons.
-             */
-            if (!"STOP".equalsIgnoreCase(finishReason)) {
-
-                String finishMessage =
-                        candidate
-                                .path("finishMessage")
+                String status =
+                        error.path("status")
                                 .asText("");
 
                 String message =
-                        "Gemini did not return usable content. "
-                                + "finishReason=" + finishReason;
-
-                if (!finishMessage.isBlank()) {
-                    message +=
-                            ", finishMessage=" + finishMessage;
-                }
-
-                throw new RuntimeException(message);
-            }
-
-            JsonNode parts =
-                    candidate
-                            .path("content")
-                            .path("parts");
-
-            if (!parts.isArray() || parts.isEmpty()) {
+                        error.path("message")
+                                .asText(
+                                        "Gemini returned no candidates."
+                                );
 
                 throw new RuntimeException(
-                        "Gemini returned a successful response "
-                                + "without any content parts."
+                        "Gemini error "
+                                + status
+                                + ": "
+                                + message
                 );
             }
 
-            StringBuilder textBuilder =
+            StringBuilder result =
                     new StringBuilder();
 
-            for (JsonNode part : parts) {
+            for (JsonNode candidate : candidates) {
 
-                JsonNode textNode =
-                        part.path("text");
+                String finishReason =
+                        candidate.path("finishReason")
+                                .asText("");
 
-                if (!textNode.isMissingNode()) {
+                if (!finishReason.isBlank()
+                        && !"STOP".equalsIgnoreCase(finishReason)
+                        && !"MAX_TOKENS".equalsIgnoreCase(finishReason)) {
 
-                    String text =
-                            textNode.asText("");
+                    throw new RuntimeException(
+                            "Gemini generation stopped with finish reason: "
+                                    + finishReason
+                    );
+                }
 
-                    if (!text.isBlank()) {
-                        textBuilder.append(text);
+                JsonNode parts =
+                        candidate
+                                .path("content")
+                                .path("parts");
+
+                if (parts.isArray()) {
+
+                    for (JsonNode part : parts) {
+
+                        JsonNode text =
+                                part.path("text");
+
+                        if (!text.isMissingNode()
+                                && !text.isNull()) {
+
+                            result.append(
+                                    text.asText()
+                            );
+                        }
                     }
                 }
             }
 
-            String text =
-                    textBuilder
-                            .toString()
-                            .trim();
+            String output =
+                    result.toString().trim();
 
-            if (text.isBlank()) {
+            if (output.isEmpty()) {
 
                 throw new RuntimeException(
-                        "Gemini returned empty generated content."
+                        "Gemini returned an empty text response."
                 );
             }
 
-            return text;
+            return output;
 
         } catch (RuntimeException e) {
 
@@ -293,8 +326,7 @@ public class GeminiProvider implements LLMProvider {
         } catch (Exception e) {
 
             throw new RuntimeException(
-                    "Failed to parse Gemini response: "
-                            + rawJson,
+                    "Failed to parse Gemini response.",
                     e
             );
         }

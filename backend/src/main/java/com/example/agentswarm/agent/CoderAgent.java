@@ -17,13 +17,6 @@ import java.util.Set;
 @Component
 public class CoderAgent {
 
-    /*
-     * Increased from 12 to 16.
-     *
-     * This gives Gemini enough room to create one Java file
-     * for each public class/interface instead of combining
-     * multiple public types into invalid Java files.
-     */
     private static final int MAX_FILES = 20;
 
     private static final int MAX_FILE_SIZE = 512 * 1024;
@@ -316,7 +309,7 @@ public class CoderAgent {
 
                 IMPLEMENTATION RULES:
 
-                - Maximum 16 files.
+                - Maximum 20 files.
                 - Include pom.xml.
                 - Include Dockerfile.
                 - If PostgreSQL is required, include docker-compose.yml.
@@ -472,7 +465,7 @@ public class CoderAgent {
 
                 Do not add unrelated functionality.
 
-                Maximum 16 files.
+                Maximum 20 files.
 
                 Return ONLY the JSON object.
                 """);
@@ -704,7 +697,7 @@ public class CoderAgent {
 
                 RULES:
 
-                - Maximum 16 files.
+                - Maximum 20 files.
                 - Include pom.xml.
                 - Include Dockerfile.
                 - Implement only required functionality.

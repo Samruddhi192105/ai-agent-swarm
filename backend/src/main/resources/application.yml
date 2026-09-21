@@ -24,7 +24,7 @@ llm:
     model: ${LLM_GEMINI_MODEL:gemini-3.6-flash}
 
 sandbox:
-  build-image: maven:3.9-eclipse-temurin-21
+  build-image: maven:3.9.9-eclipse-temurin-21
   timeout-seconds: 180
   memory-limit-mb: 1024
   workspace-root: /tmp/agentswarm-runs

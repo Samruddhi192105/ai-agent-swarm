@@ -1,4 +1,5 @@
 services:
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -21,12 +22,16 @@ services:
       DB_USER: ${DB_USER:-agentswarm}
       DB_PASSWORD: ${DB_PASSWORD:-agentswarm}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-      LLM_GEMINI_MODEL: ${LLM_GEMINI_MODEL:-gemini-3.6-flash}
+      LLM_GEMINI_MODEL: ${LLM_GEMINI_MODEL:-gemini-2.5-flash}
     ports:
       - "8080:8080"
-    # Lets the backend talk to the host Docker daemon to spin up sandbox containers.
     volumes:
+      # Lets the backend talk to the host Docker daemon
+      # to create sandbox containers.
       - /var/run/docker.sock:/var/run/docker.sock
+
+      # Shared workspace for generated projects.
+      - agentswarm_workspace:/tmp/agentswarm-runs
 
   frontend:
     build: ./frontend
@@ -39,3 +44,7 @@ services:
 
 volumes:
   pgdata:
+
+  # Shared between backend and sandbox containers.
+  agentswarm_workspace:
+    name: agentswarm_workspace
