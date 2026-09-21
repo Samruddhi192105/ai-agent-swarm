@@ -22,7 +22,7 @@ The goal is to create a system capable of taking a natural-language software req
 
 The main interface allows users to describe the software project they want to build and initialize the multi-agent development workflow.
 
-<img width="959" height="412" alt="1" src="https://github.com/user-attachments/assets/34f4424f-2daa-4d69-a3f7-55d0544ec75a" />
+<img width="959" height="412" alt="Screenshot 2026-09-21 193520" src="https://github.com/user-attachments/assets/ca3c2d63-8cba-4dc5-b149-fb350f63f7e4" />
 
 ---
 
@@ -35,7 +35,7 @@ The system visualizes the four specialized agents responsible for different stag
 * **Tester** — Runs tests and identifies implementation issues.
 * **Reviewer** — Reviews the implementation for correctness and quality.
 
-<img width="959" height="410" alt="2" src="https://github.com/user-attachments/assets/1898b5d9-34fa-4b25-90f2-8fd65545c1de" />
+<img width="959" height="412" alt="Screenshot 2026-09-21 193520" src="https://github.com/user-attachments/assets/450a007a-31ab-40ce-9042-7bf05ffae7da" />
 
 ---
 
@@ -43,7 +43,7 @@ The system visualizes the four specialized agents responsible for different stag
 
 The execution interface provides visibility into the swarm's execution process while the generated project is represented as a build artifact.
 
-<img width="959" height="409" alt="3" src="https://github.com/user-attachments/assets/7e4cc773-c7f1-44a0-ac28-8e8bcb42ac8e" />
+<img width="959" height="412" alt="Screenshot 2026-09-21 193414" src="https://github.com/user-attachments/assets/db1a1d85-4d95-465e-bfbd-b3691553047e" />
 
 ---
 
