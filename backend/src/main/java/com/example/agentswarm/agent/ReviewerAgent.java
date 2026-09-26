@@ -7,8 +7,15 @@ import com.example.agentswarm.llm.LLMProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+
 @Component
 public class ReviewerAgent {
+
+        private static final int MAX_REVIEW_SOURCE_CHARS = 30000;
 
     private static final String SYSTEM_PROMPT = """
             You are the Reviewer Agent in an AI software engineering swarm.
@@ -582,10 +589,10 @@ public class ReviewerAgent {
              * Keep the reviewer prompt reasonably small.
              */
 
-            if (log.length() > 3000) {
+            if (log.length() > 6000) {
 
                 sb.append(
-                        log.substring(0, 3000)
+                        log.substring(log.length() - 6000)
                 );
 
             } else {
@@ -600,22 +607,40 @@ public class ReviewerAgent {
         // PROJECT FILES
         // --------------------------------------------------------
 
-        sb.append(
-                "PROJECT FILES:\n"
-        );
+                sb.append("PROJECT SOURCE (up to ")
+                                .append(MAX_REVIEW_SOURCE_CHARS)
+                                .append(" characters):\n");
 
+                int remainingSourceChars = MAX_REVIEW_SOURCE_CHARS;
         if (project != null
                 && project.files() != null) {
 
-            project.files().forEach(file -> {
+                    List<CoderOutput.GeneratedFileDto> reviewFiles = new ArrayList<>(
+                            project.files().stream()
+                                    .filter(Objects::nonNull)
+                                    .toList());
+                    reviewFiles.sort(Comparator.comparingInt(file ->
+                            file.path() != null && file.path().contains("/test/") ? 0 : 1));
 
-                if (file != null) {
+                    for (CoderOutput.GeneratedFileDto file : reviewFiles) {
+                        if (file.path() == null || file.content() == null) {
+                                        continue;
+                                }
 
-                    sb.append("- ")
-                            .append(file.path())
-                            .append("\n");
-                }
-            });
+                                if (remainingSourceChars <= 0) {
+                                        sb.append("\n[Remaining generated source omitted.]\n");
+                                        break;
+                                }
+
+                                sb.append("\n--- ").append(file.path()).append(" ---\n");
+                                int includedChars = Math.min(file.content().length(), remainingSourceChars);
+                                sb.append(file.content(), 0, includedChars);
+                                remainingSourceChars -= includedChars;
+                                if (includedChars < file.content().length()) {
+                                        sb.append("\n[File content truncated.]\n");
+                                        remainingSourceChars = 0;
+                                }
+                        }
         }
 
         // --------------------------------------------------------
@@ -626,15 +651,12 @@ public class ReviewerAgent {
 
                 REVIEW:
 
-                1. Check the original requirement.
-                2. Check build status.
-                3. Check test results.
-                4. Identify only real problems.
-                5. If acceptable, return PASS and [].
-                6. If correction is required, return RETRY.
-                7. For RETRY, provide concise file-level issues.
-                8. Do not request unrelated functionality.
-                9. Do not reproduce source code.
+                1. Check the original requirement against the supplied source and tests.
+                2. Use the Maven output to locate concrete build or test failures.
+                3. Distinguish an implementation defect from a test that contradicts the requirement.
+                4. Identify only real problems and give actionable file-level fixes.
+                5. Return PASS only when the build and tests pass and the requirement is met.
+                6. Do not request unrelated functionality or reproduce source code.
 
                 Return ONLY valid JSON.
                 """);

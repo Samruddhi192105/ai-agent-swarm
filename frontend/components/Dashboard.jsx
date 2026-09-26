@@ -239,13 +239,22 @@ export default function Dashboard() {
   };
 
   const downloadProject = () => {
-    if (!projectId) return;
+    if (!projectId || status !== "PASSED") return;
 
     window.open(
       `${API_URL}/api/projects/${projectId}/download`,
       "_blank"
     );
   };
+
+  const artifactAvailable = projectId !== null && status === "PASSED";
+  const artifactState = loading
+    ? "BUILDING"
+    : status === "FAILED"
+    ? "FAILED"
+    : artifactAvailable
+    ? "AVAILABLE"
+    : "WAITING";
 
   return (
     <main className="swarm-page">
@@ -527,12 +536,13 @@ export default function Dashboard() {
               BUILD ARTIFACT
             </div>
 
-            <div className="artifact-state">
-              {projectId ? "AVAILABLE" : "WAITING"}
+            <div className={`artifact-state artifact-state-${artifactState.toLowerCase()}`}>
+              <span className="artifact-state-dot" />
+              {artifactState}
             </div>
           </div>
 
-          {projectId ? (
+          {artifactAvailable ? (
             <div className="output-content artifact-ready">
               <div className="artifact-icon">
                 <FileCode2 size={28} />
@@ -554,6 +564,26 @@ export default function Dashboard() {
                 <Download size={13} />
                 DOWNLOAD PROJECT
               </button>
+            </div>
+          ) : artifactState === "BUILDING" ? (
+            <div className="output-content">
+              <div className="empty-artifact artifact-building">
+                <div className="empty-icon">
+                  <CircleDot size={23} />
+                </div>
+                <strong>Building artifact</strong>
+                <span>The swarm is generating and validating your project.</span>
+              </div>
+            </div>
+          ) : artifactState === "FAILED" ? (
+            <div className="output-content">
+              <div className="empty-artifact artifact-failed">
+                <div className="empty-icon">
+                  <XCircle size={23} />
+                </div>
+                <strong>Artifact unavailable</strong>
+                <span>{error || "The project did not pass validation."}</span>
+              </div>
             </div>
           ) : (
             <div className="output-content">
