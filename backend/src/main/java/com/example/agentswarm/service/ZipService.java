@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -18,13 +19,27 @@ public class ZipService {
     public String zip(CoderOutput project, String projectName, long projectId) {
         try {
             Files.createDirectories(Paths.get(outputDir));
-            String safeName = (projectName == null ? "project" : projectName).replaceAll("[^a-zA-Z0-9-_]", "-");
+            String safeName = (projectName == null ? "project" : projectName)
+                    .replaceAll("[^a-zA-Z0-9-_]", "-");
+            if (safeName.isBlank()) {
+                safeName = "project";
+            }
             Path zipPath = Paths.get(outputDir, safeName + "-" + projectId + ".zip");
 
             try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(zipPath))) {
                 for (CoderOutput.GeneratedFileDto file : project.files()) {
-                    zos.putNextEntry(new ZipEntry(file.path()));
-                    zos.write(file.content().getBytes());
+                    Path relativePath = Paths.get(file.path().replace('\\', '/')).normalize();
+                    if (relativePath.isAbsolute()
+                            || relativePath.startsWith("..")
+                            || relativePath.toString().isBlank()
+                            || relativePath.toString().equals(".")
+                            || file.path().matches("^[A-Za-z]:.*")) {
+                        throw new IllegalArgumentException("Unsafe generated file path: " + file.path());
+                    }
+
+                    String entryName = safeName + "/" + relativePath.toString().replace('\\', '/');
+                    zos.putNextEntry(new ZipEntry(entryName));
+                    zos.write(file.content().getBytes(StandardCharsets.UTF_8));
                     zos.closeEntry();
                 }
             }

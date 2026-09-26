@@ -16,8 +16,6 @@ import java.util.List;
 @Service
 public class OrchestratorService {
 
-    private static final int MAX_ITERATIONS = 2;
-
     private final PlannerAgent planner;
     private final CoderAgent coder;
     private final TesterAgent tester;
@@ -61,7 +59,7 @@ public class OrchestratorService {
         CoderOutput code = null;
         ReviewDecision lastDecision = null;
 
-        for (int iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
+        for (int iteration = 1; iteration <= project.getMaxIterations(); iteration++) {
             project.setCurrentIteration(iteration);
             project.setStatus(Project.ProjectStatus.CODING);
             projectRepository.save(project);

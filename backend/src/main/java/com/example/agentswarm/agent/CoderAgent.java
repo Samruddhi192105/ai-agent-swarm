@@ -5,7 +5,15 @@ import com.example.agentswarm.dto.PlannerSpec;
 import com.example.agentswarm.llm.LLMProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -17,7 +25,9 @@ import java.util.Set;
 @Component
 public class CoderAgent {
 
-    private static final int MAX_FILES = 20;
+        private static final int MAX_FILES = 40;
+
+        private static final int MAX_GENERATION_ATTEMPTS = 3;
 
     private static final int MAX_FILE_SIZE = 512 * 1024;
 
@@ -137,7 +147,7 @@ public class CoderAgent {
 
                 FILE STRUCTURE RULES:
 
-                - Maximum 20 files.
+                - Maximum 40 files.
                 - Every public Java class MUST be in its own .java file.
                 - Every public Java interface MUST be in its own .java file.
                 - Every public Java enum MUST be in its own .java file.
@@ -309,7 +319,7 @@ public class CoderAgent {
 
                 IMPLEMENTATION RULES:
 
-                - Maximum 20 files.
+                - Maximum 40 files.
                 - Include pom.xml.
                 - Include Dockerfile.
                 - If PostgreSQL is required, include docker-compose.yml.
@@ -465,7 +475,7 @@ public class CoderAgent {
 
                 Do not add unrelated functionality.
 
-                Maximum 20 files.
+                Maximum 40 files.
 
                 Return ONLY the JSON object.
                 """);
@@ -493,83 +503,27 @@ public class CoderAgent {
                         + userPrompt.length()
         );
 
-        String rawResponse =
-                llmProvider.generate(
-                        systemPrompt,
-                        userPrompt
-                );
+        String retryPrompt = userPrompt;
+        List<String> validationErrors = new ArrayList<>();
 
-        try {
-
-            return parseCoderOutput(
-                    rawResponse
-            );
-
-        } catch (Exception firstError) {
-
-            System.out.println();
-            System.out.println(
-                    "========================================"
-            );
-
-            System.out.println(
-                    "CODER JSON PARSING FAILED"
-            );
-
-            System.out.println(
-                    "========================================"
-            );
-
-            System.out.println(
-                    "First parsing error:"
-            );
-
-            System.out.println(
-                    firstError.getMessage()
-            );
-
-            System.out.println();
-
-            System.out.println(
-                    "Attempting one fresh Coder generation..."
-            );
-
-            /*
-             * IMPORTANT:
-             *
-             * Do not send the previous generated source
-             * back to Gemini.
-             *
-             * Gemini receives only the Planner specification.
-             */
-
-            String retryPrompt =
-                    buildFreshRetryPrompt(spec);
-
-            String retryResponse =
-                    llmProvider.generate(
-                            systemPrompt,
-                            retryPrompt
-                    );
+        for (int attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
+            String rawResponse = llmProvider.generate(systemPrompt, retryPrompt);
 
             try {
+                return parseCoderOutput(rawResponse);
+            } catch (Exception validationError) {
+                validationErrors.add("Attempt " + attempt + ": " + validationError.getMessage());
+                System.out.println("Coder output validation failed: " + validationError.getMessage());
 
-                return parseCoderOutput(
-                        retryResponse
-                );
-
-            } catch (Exception secondError) {
-
-                throw new RuntimeException(
-                        "Coder Agent returned invalid JSON after retry. "
-                                + "First parsing error: "
-                                + firstError.getMessage()
-                                + ". Second parsing error: "
-                                + secondError.getMessage(),
-                        secondError
-                );
+                if (attempt < MAX_GENERATION_ATTEMPTS) {
+                    retryPrompt = buildFreshRetryPrompt(userPrompt, validationError.getMessage());
+                }
             }
         }
+
+        throw new RuntimeException(
+                "Coder Agent returned invalid output after " + MAX_GENERATION_ATTEMPTS
+                        + " attempts. " + String.join(" | ", validationErrors));
     }
 
     // ============================================================
@@ -577,183 +531,19 @@ public class CoderAgent {
     // ============================================================
 
     private String buildFreshRetryPrompt(
-            PlannerSpec spec
+            String originalPrompt,
+            String validationFeedback
     ) {
+        return originalPrompt + """
 
-        StringBuilder prompt = new StringBuilder();
+                PREVIOUS OUTPUT VALIDATION ERROR:
+                %s
 
-        prompt.append("""
-                Generate a fresh implementation.
-
-                PROJECT:
-                """);
-
-        prompt.append(spec.projectName())
-                .append("\n\n");
-
-        // --------------------------------------------------------
-        // REQUIREMENTS
-        // --------------------------------------------------------
-
-        prompt.append("REQUIREMENTS:\n");
-
-        if (spec.requirements() != null) {
-
-            for (String requirement :
-                    spec.requirements()) {
-
-                prompt.append("- ")
-                        .append(requirement)
-                        .append("\n");
-            }
-        }
-
-        // --------------------------------------------------------
-        // ENTITIES
-        // --------------------------------------------------------
-
-        prompt.append("\nENTITIES:\n");
-
-        if (spec.entities() != null) {
-
-            for (PlannerSpec.Entity entity :
-                    spec.entities()) {
-
-                prompt.append("- ")
-                        .append(entity.name())
-                        .append("\n");
-
-                if (entity.fields() != null) {
-
-                    for (PlannerSpec.Field field :
-                            entity.fields()) {
-
-                        prompt.append("  - ")
-                                .append(field.name())
-                                .append(": ")
-                                .append(field.type())
-                                .append("\n");
-                    }
-                }
-            }
-        }
-
-        // --------------------------------------------------------
-        // ENDPOINTS
-        // --------------------------------------------------------
-
-        prompt.append("\nENDPOINTS:\n");
-
-        if (spec.endpoints() != null) {
-
-            for (PlannerSpec.Endpoint endpoint :
-                    spec.endpoints()) {
-
-                prompt.append("- ")
-                        .append(endpoint.method())
-                        .append(" ")
-                        .append(endpoint.path())
-                        .append(" - ")
-                        .append(endpoint.description())
-                        .append("\n");
-            }
-        }
-
-        // --------------------------------------------------------
-        // DATABASE
-        // --------------------------------------------------------
-
-        prompt.append("\nDATABASE:\n");
-
-        if (spec.database() != null) {
-
-            prompt.append(
-                    spec.database().toString()
-            );
-        }
-
-        // --------------------------------------------------------
-        // TESTING
-        // --------------------------------------------------------
-
-        prompt.append("\n\nTESTING:\n");
-
-        if (spec.testingRequirements() != null) {
-
-            for (String requirement :
-                    spec.testingRequirements()) {
-
-                prompt.append("- ")
-                        .append(requirement)
-                        .append("\n");
-            }
-        }
-
-        // --------------------------------------------------------
-        // OUTPUT
-        // --------------------------------------------------------
-
-        prompt.append("""
-
-                RULES:
-
-                - Maximum 20 files.
-                - Include pom.xml.
-                - Include Dockerfile.
-                - Implement only required functionality.
-                - Keep source files concise.
-                - Keep tests concise.
-                - No README.
-                - No documentation.
-                - No unnecessary files.
-                - No absolute paths.
-                - No ../ paths.
-
-                JAVA FILE STRUCTURE:
-
-                Every public Java class must be in its own
-                correctly named .java file.
-
-                Every public Java interface must be in its own
-                correctly named .java file.
-
-                Every public Java enum must be in its own
-                correctly named .java file.
-
-                Never put multiple public Java types in one file.
-
-                Do not create files such as:
-
-                Entities.java
-                Repositories.java
-                OtherRepositories.java
-
-                when they contain multiple public Java types.
-
-                IMPORTANT JSON RULE:
-
-                File contents are JSON strings.
-                Escape every newline as \\n.
-                Escape every quote inside file content.
-                Escape backslashes correctly.
-
-                Return ONLY valid JSON:
-
-                {
-                  "files": [
-                    {
-                      "path": "relative/path",
-                      "content": "complete file content"
-                    }
-                  ]
-                }
-
-                No Markdown.
-                No code fences.
-                No explanations.
-                """);
-
-        return prompt.toString();
+                Generate a corrected response that fixes this validation error.
+                Preserve all requirements and reviewer feedback above.
+                Keep the response to no more than 40 files.
+                Return only the required JSON object.
+                """.formatted(validationFeedback);
     }
 
     // ============================================================
@@ -1217,6 +1007,7 @@ public class CoderAgent {
             if ("pom.xml".equals(path)) {
 
                 hasPom = true;
+                                validatePom(content);
             }
 
             if ("Dockerfile".equalsIgnoreCase(path)) {
@@ -1246,5 +1037,53 @@ public class CoderAgent {
                     "Generated project must contain a Dockerfile."
             );
         }
+    }
+
+    private void validatePom(String content) {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setXIncludeAware(false);
+            factory.setExpandEntityReferences(false);
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+
+            Document document = factory.newDocumentBuilder().parse(new InputSource(new StringReader(content)));
+            Element root = document.getDocumentElement();
+            if (root == null || !"project".equals(elementName(root))) {
+                throw new IllegalArgumentException("pom.xml must have a <project> root element.");
+            }
+
+            NodeList children = root.getChildNodes();
+            for (int i = 0; i < children.getLength(); i++) {
+                Node child = children.item(i);
+                if (child.getNodeType() != Node.ELEMENT_NODE || !"dependencies".equals(elementName(child))) {
+                    continue;
+                }
+
+                NodeList dependencies = child.getChildNodes();
+                for (int j = 0; j < dependencies.getLength(); j++) {
+                    Node dependency = dependencies.item(j);
+                    if (dependency.getNodeType() == Node.ELEMENT_NODE
+                            && !"dependency".equals(elementName(dependency))) {
+                        throw new IllegalArgumentException(
+                                "pom.xml has an unexpected <" + elementName(dependency)
+                                        + "> directly inside <dependencies>; each entry must be a <dependency>.");
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Generated pom.xml is not valid XML: " + e.getMessage(), e);
+        }
+    }
+
+    private String elementName(Node node) {
+        return node.getLocalName() == null ? node.getNodeName() : node.getLocalName();
     }
 }
