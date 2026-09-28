@@ -2,7 +2,7 @@
 
 import CinematicBackground from "./CinematicBackground";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -108,6 +108,9 @@ export default function Dashboard() {
   const [projectId, setProjectId] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [currentIteration, setCurrentIteration] = useState(0);
+  const [maxIterations, setMaxIterations] = useState(3);
+  const [iterationEstimated, setIterationEstimated] = useState(false);
 
   const [executionLogs, setExecutionLogs] = useState([
     {
@@ -130,6 +133,27 @@ export default function Dashboard() {
     ]);
   };
 
+  useEffect(() => {
+    if (!loading) return;
+
+    const phases = ["CODING", "TESTING", "REVIEWING"];
+    let phaseIndex = 0;
+    let estimatedIteration = 1;
+
+    const intervalId = window.setInterval(() => {
+      if (phaseIndex === phases.length) {
+        phaseIndex = 0;
+        estimatedIteration = Math.min(estimatedIteration + 1, maxIterations);
+        setCurrentIteration(estimatedIteration);
+      }
+
+      setStatus(phases[phaseIndex]);
+      phaseIndex += 1;
+    }, 10000);
+
+    return () => window.clearInterval(intervalId);
+  }, [loading, maxIterations]);
+
   const buildProject = async () => {
     if (!prompt.trim() || loading) {
       return;
@@ -139,6 +163,9 @@ export default function Dashboard() {
     setError("");
     setProjectId(null);
     setStatus("PLANNING");
+    setCurrentIteration(1);
+    setMaxIterations(3);
+    setIterationEstimated(true);
 
     setExecutionLogs([
       {
@@ -193,10 +220,19 @@ export default function Dashboard() {
         setProjectId(returnedId);
       }
 
-      const returnedStatus =
-        data?.status ||
-        data?.project?.status ||
-        "PASSED";
+      const returnedProject = data?.project ?? data;
+      const returnedStatus = returnedProject?.status || "PASSED";
+      const actualIteration = Number(returnedProject?.currentIteration);
+      const actualMaxIterations = Number(returnedProject?.maxIterations);
+
+      if (Number.isFinite(actualIteration)) {
+        setCurrentIteration(actualIteration);
+        setIterationEstimated(false);
+      }
+
+      if (Number.isFinite(actualMaxIterations) && actualMaxIterations > 0) {
+        setMaxIterations(actualMaxIterations);
+      }
 
       setStatus(returnedStatus);
 
@@ -225,6 +261,9 @@ export default function Dashboard() {
     setProjectId(null);
     setError("");
     setLoading(false);
+    setCurrentIteration(0);
+    setMaxIterations(3);
+    setIterationEstimated(false);
 
     setExecutionLogs([
       {
@@ -387,8 +426,9 @@ export default function Dashboard() {
 
           <div className="iteration">
             ITERATION
-            <strong>01</strong>
-            <span>/ 01</span>
+            <strong>{String(currentIteration).padStart(2, "0")}</strong>
+            <span>/ {String(maxIterations).padStart(2, "0")}</span>
+            {iterationEstimated && <span>EST.</span>}
           </div>
         </div>
 
