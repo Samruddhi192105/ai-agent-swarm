@@ -20,7 +20,7 @@ server:
 
 llm:
   gemini:
-    api-key:${GEMINI_API_KEY}
+    api-key: ${GEMINI_API_KEY:}
     model: ${LLM_GEMINI_MODEL:gemini-3.6-flash}
 
 sandbox:
