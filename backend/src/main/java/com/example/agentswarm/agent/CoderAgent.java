@@ -114,6 +114,17 @@ public class CoderAgent {
                 - JUnit when testing is required
                 - Docker
                 - Docker Compose when PostgreSQL is required
+                - Next.js and React for a frontend only when the requirements explicitly ask for a user-facing interface
+
+                FRONTEND REQUIREMENTS:
+
+                - Do not generate frontend files for backend-only requirements.
+                - When a frontend is requested, create a separate frontend/ Next.js application using React.
+                - Include the frontend package.json and required Next.js app files so it can run independently.
+                - Implement the requested user workflows in the frontend and connect them to the generated backend API.
+                - Read the backend API base URL from NEXT_PUBLIC_API_URL instead of hardcoding it throughout the UI.
+                - Keep frontend files under frontend/ and backend files in the normal Maven project structure.
+                - Do not replace or move backend files to add the frontend.
 
                 Keep the implementation small, clean, and functional.
 
@@ -127,7 +138,8 @@ public class CoderAgent {
                 - The final image must run the generated Spring Boot JAR.
                 - Do not use ./mvnw unless Maven wrapper files are also generated.
                 - When PostgreSQL is required, generate docker-compose.yml.
-                - docker-compose.yml must contain both the application service and PostgreSQL service.
+                - When a frontend is requested, generate docker-compose.yml with application and frontend services.
+                - When PostgreSQL is required, docker-compose.yml must also contain a PostgreSQL service.
                 - The application container must connect to PostgreSQL using the Docker Compose service name, never localhost.
                 - Database configuration must support environment variables.
                 - Do not hardcode database passwords or API keys.
@@ -162,6 +174,11 @@ public class CoderAgent {
                 REQUIRED:
                 - pom.xml
                 - Dockerfile
+
+                When a frontend is requested:
+                - frontend/package.json
+                - frontend/Dockerfile
+                - docker-compose.yml with backend and frontend services
 
                 When PostgreSQL is required:
                 - docker-compose.yml
@@ -322,6 +339,9 @@ public class CoderAgent {
                 - Maximum 40 files.
                 - Include pom.xml.
                 - Include Dockerfile.
+                - Generate a frontend only when the requirements ask for a user-facing interface.
+                - If requested, put the Next.js and React application under frontend/ and include frontend/package.json and frontend/Dockerfile.
+                - If requested, include a root docker-compose.yml with backend and frontend services.
                 - If PostgreSQL is required, include docker-compose.yml.
                 - Implement only requested functionality.
 
@@ -516,7 +536,11 @@ public class CoderAgent {
                 System.out.println("Coder output validation failed: " + validationError.getMessage());
 
                 if (attempt < MAX_GENERATION_ATTEMPTS) {
-                    retryPrompt = buildFreshRetryPrompt(userPrompt, validationError.getMessage());
+                                        retryPrompt = buildFreshRetryPrompt(
+                                                        userPrompt,
+                                                        validationError.getMessage(),
+                                                        attempt + 1
+                                        );
                 }
             }
         }
@@ -532,9 +556,10 @@ public class CoderAgent {
 
     private String buildFreshRetryPrompt(
             String originalPrompt,
-            String validationFeedback
+                        String validationFeedback,
+                        int retryAttempt
     ) {
-        return originalPrompt + """
+                String retryPrompt = originalPrompt + """
 
                 PREVIOUS OUTPUT VALIDATION ERROR:
                 %s
@@ -544,6 +569,28 @@ public class CoderAgent {
                 Keep the response to no more than 40 files.
                 Return only the required JSON object.
                 """.formatted(validationFeedback);
+
+                if (isTruncatedOutput(validationFeedback)) {
+                        int retryFileLimit = retryAttempt == 2 ? 24 : 16;
+                        retryPrompt += """
+
+                                        TRUNCATED OUTPUT RECOVERY:
+                                        The previous response was cut off before its JSON was complete. Reduce the implementation size substantially.
+                                        Return a complete, syntactically valid JSON object with no more than %d files.
+                                        Keep every file concise. Avoid optional features, verbose comments, examples, and nonessential tests.
+                                        Preserve the requested core workflows, including the frontend when the user asked for a UI.
+                                        Do not stop early or leave any JSON string, object, or array unfinished.
+                                        """.formatted(retryFileLimit);
+                }
+
+                return retryPrompt;
+        }
+
+        private boolean isTruncatedOutput(String validationFeedback) {
+                String normalizedFeedback = validationFeedback.toLowerCase();
+                return normalizedFeedback.contains("unexpected end-of-input")
+                                || normalizedFeedback.contains("unexpected end of input")
+                                || normalizedFeedback.contains("was expecting closing quote");
     }
 
     // ============================================================

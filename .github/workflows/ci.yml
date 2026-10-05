@@ -32,6 +32,7 @@ jobs:
         env:
           POSTGRES_DB: agentswarm
           POSTGRES_USER: agentswarm
+          # This database is isolated to the ephemeral CI job.
           POSTGRES_HOST_AUTH_METHOD: trust
 
         ports:
