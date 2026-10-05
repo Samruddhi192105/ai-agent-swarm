@@ -19,3 +19,7 @@ out/
 
 # OS
 .DS_Store
+
+docker-compose.yml
+ci.yml
+docker-compose.prod.yml
