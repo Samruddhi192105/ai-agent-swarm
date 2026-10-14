@@ -1,4 +1,4 @@
-# 🤖 AI Agent Swarm
+# 🤖 AgentNova - AI Agent Swarm
 
 > An AI-powered multi-agent software engineering system that plans, generates, tests, reviews, and iteratively improves software projects through specialized AI agents.
 
